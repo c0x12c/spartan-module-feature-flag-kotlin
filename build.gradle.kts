@@ -68,7 +68,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
 
-    testImplementation("org.postgresql:postgresql:42.3.1")
+    testImplementation("org.postgresql:postgresql:42.7.4")
 
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
