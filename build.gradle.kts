@@ -72,7 +72,7 @@ dependencies {
 
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
 
     // MockK for mocking objects
     testImplementation("io.mockk:mockk:1.12.0")
