@@ -3,13 +3,58 @@ plugins {
 
     id("maven-publish")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.8.10"
+    id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
 }
 
 group = "com.c0x12c"
 version = "0.1.0"
 
+kotlin {
+    jvmToolchain {
+        (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
 repositories {
     mavenCentral()
+}
+
+ktlint {
+    android.set(false) // Set to true if it's an Android project
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+
+    reporters {
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+    }
+    // Ensure it applies to Kotlin files in the correct directories
+    filter {
+        exclude("**/generated/**")
+        include("**/src/main/kotlin/**")
+        include("**/src/test/kotlin/**")
+    }
+}
+
+sourceSets {
+    main {
+        kotlin.srcDirs("src/main/kotlin")
+    }
+    test {
+        kotlin.srcDirs("src/test/kotlin")
+    }
+}
+
+tasks.named("compileJava").configure {
+    enabled = false
+}
+tasks.named("compileTestJava").configure {
+    enabled = false
 }
 
 dependencies {
