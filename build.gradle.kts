@@ -75,7 +75,7 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
 
     // MockK for mocking objects
-    testImplementation("io.mockk:mockk:1.12.0")
+    testImplementation("io.mockk:mockk:1.13.12")
 
     // Coroutines for suspend functions
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
