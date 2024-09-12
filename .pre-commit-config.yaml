@@ -1,0 +1,11 @@
+repos:
+  - repo: https://github.com/pinterest/ktlint
+    rev: v0.48.2  # You can change this to the latest version of ktlint
+    hooks:
+      - id: ktlint
+        name: Kotlin Linter
+        alias: ktlint
+        entry: ktlint
+        language: script
+        files: \.kt$
+        types: [file]
