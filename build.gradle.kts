@@ -63,8 +63,15 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("io.micronaut:micronaut-runtime:4.6.5")
-    implementation("io.lettuce:lettuce-core:6.4.0.RELEASE")
+
+    implementation("javax.inject:javax.inject:1")
+    implementation("redis.clients:jedis:5.1.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+
+    implementation("org.jetbrains.exposed:exposed-core:0.49.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.49.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
 
     testImplementation(kotlin("test"))
 

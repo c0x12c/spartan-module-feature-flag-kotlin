@@ -17,7 +17,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class FeatureFlagServiceIntegrationTest {
+class FeatureFlagCacheServiceIntegrationTest {
 
     private lateinit var postgresContainer: PostgreSQLContainer<*>
     private lateinit var redisContainer: GenericContainer<*>

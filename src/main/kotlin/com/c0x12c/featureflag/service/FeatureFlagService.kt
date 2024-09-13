@@ -1,99 +1,138 @@
 package com.c0x12c.featureflag.service
 
 import com.c0x12c.featureflag.cache.RedisCache
-import com.c0x12c.featureflag.entity.FeatureFlag
+import com.c0x12c.featureflag.entity.FeatureFlagEntity
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
-import java.util.UUID
+import com.c0x12c.featureflag.exception.FeatureFlagError
+import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import java.time.Instant
 
 class FeatureFlagService(
-    private val repository: FeatureFlagRepository,
-    private val cache: RedisCache? = null
+  private val repository: FeatureFlagRepository,
+  private val cache: RedisCache? = null,
+  private val cacheTTLSeconds: Long = 3600
 ) {
-
-    // Create a new feature flag and cache it if caching is enabled
-    suspend fun createFeatureFlag(flagData: Map<String, Any>): FeatureFlag {
-        // Convert flagData to FeatureFlag entity
-        val featureFlag = FeatureFlag(
-            id = UUID.randomUUID(),
-            name = flagData["name"] as String,
-            code = flagData["code"] as String,
-            description = flagData["description"] as? String,
-            enabled = flagData["enabled"] as? Boolean ?: false,
-            metadata = flagData["metadata"] as? Map<String, Any>
-        )
-
-        // Insert the feature flag into the repository (database)
-        repository.insert(featureFlag)
-
-        // Cache the feature flag if caching is enabled
-        cache?.set(featureFlag.code, featureFlag)
-
-        return featureFlag
+  /**
+   * Create a new feature flag.
+   *
+   * @param flagData Map containing the feature flag data.
+   * @return The created FeatureFlagEntity.
+   */
+  fun createFeatureFlag(flagData: Map<String, Any>): FeatureFlagEntity {
+    val featureFlagEntity = FeatureFlagEntity.new {
+      name = flagData["name"] as String
+      code = flagData["code"] as String
+      description = flagData["description"] as? String
+      enabled = flagData["enabled"] as? Boolean ?: false
+      metadata = parseMetadata(flagData["metadata"])
+      createdAt = Instant.now()
     }
 
-    // Retrieve a feature flag by its code, checking the cache first
-    suspend fun getFeatureFlagByCode(code: String): FeatureFlag? {
-        // Try to retrieve from cache if cache is enabled
-        cache?.get(code)?.let {
-            return it
-        }
+    repository.insert(featureFlagEntity)
+    cache?.set(featureFlagEntity.code, featureFlagEntity.toFeatureFlag(), cacheTTLSeconds)
 
-        // Retrieve from repository (database)
-        val featureFlag = repository.getByCode(code)
+    return featureFlagEntity
+  }
 
-        // If found, cache the feature flag
-        if (featureFlag != null && cache != null) {
-            cache.set(code, featureFlag)
-        }
-
-        return featureFlag
+  /**
+   * Retrieve a feature flag by its code.
+   *
+   * @param code The code of the feature flag.
+   * @return The FeatureFlagEntity if found.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   */
+  fun getFeatureFlagByCode(code: String): FeatureFlagEntity {
+    cache?.get(code)?.let {
+      return it.toEntity()
     }
 
-    // List feature flags with optional pagination
-    suspend fun listFeatureFlags(limit: Int = 100, skip: Int = 0): List<FeatureFlag> {
-        // List feature flags from the repository
-        return repository.list(limit, skip)
+    val featureFlagEntity = repository.getByCode(code)
+    return if (featureFlagEntity != null) {
+      cache?.set(code, featureFlagEntity.toFeatureFlag(), cacheTTLSeconds)
+      featureFlagEntity
+    } else {
+      throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
+    }
+  }
+
+  /**
+   * Update a feature flag.
+   *
+   * @param code The code of the feature flag to update.
+   * @param flagData Map containing the updated feature flag data.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   */
+  fun updateFeatureFlag(code: String, flagData: Map<String, Any>) {
+    val existingFlag = repository.getByCode(code)
+      ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
+
+    existingFlag.apply {
+      name = flagData["name"] as? String ?: name
+      description = flagData["description"] as? String ?: description
+      enabled = flagData["enabled"] as? Boolean ?: enabled
+      metadata = parseMetadata(flagData["metadata"]) ?: metadata
+      updatedAt = Instant.now()
     }
 
-    // Update a feature flag's fields and update the cache
-    suspend fun updateFeatureFlag(code: String, flagData: Map<String, Any>) {
-        // Retrieve the existing feature flag by its code
-        val existingFlag = getFeatureFlagByCode(code) ?: throw Exception("Feature flag not found.")
+    repository.update(existingFlag)
+    cache?.set(existingFlag.code, existingFlag.toFeatureFlag(), cacheTTLSeconds)
+  }
 
-        // Update the existing feature flag with new values
-        val updatedFlag = existingFlag.copy(
-            name = flagData["name"] as? String ?: existingFlag.name,
-            description = flagData["description"] as? String ?: existingFlag.description,
-            enabled = flagData["enabled"] as? Boolean ?: existingFlag.enabled,
-            metadata = flagData["metadata"] as? Map<String, Any> ?: existingFlag.metadata
-        )
+  /**
+   * Delete a feature flag (soft delete).
+   *
+   * @param code The code of the feature flag to delete.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   */
+  fun deleteFeatureFlag(code: String) {
+    val featureFlag = repository.getByCode(code)
+      ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
 
-        // Update the repository (database)
-        repository.update(updatedFlag)
-
-        // Update the cache if caching is enabled
-        cache?.set(updatedFlag.code, updatedFlag)
+    featureFlag.apply {
+      deletedAt = Instant.now()
     }
+    repository.update(featureFlag)
+    cache?.delete(code)
+  }
 
-    // Enable a feature flag by its code
-    suspend fun enableFeatureFlag(code: String) {
-        updateFeatureFlag(code, mapOf("enabled" to true))
+  /**
+   * List feature flags with optional pagination.
+   *
+   * @param limit The maximum number of feature flags to return.
+   * @param offset The number of feature flags to skip.
+   * @return A list of FeatureFlagEntity objects.
+   * @throws FeatureFlagError If there's an error in listing feature flags.
+   */
+  fun listFeatureFlags(limit: Int = 100, offset: Int = 0): List<FeatureFlagEntity> {
+    return repository.list(limit, offset)
+  }
+
+  /**
+   * Enable a feature flag.
+   *
+   * @param code The code of the feature flag to enable.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   * @throws FeatureFlagError If there's an error in enabling the feature flag.
+   */
+  fun enableFeatureFlag(code: String) {
+    updateFeatureFlag(code, mapOf("enabled" to true))
+  }
+
+  /**
+   * Disable a feature flag.
+   *
+   * @param code The code of the feature flag to disable.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   * @throws FeatureFlagError If there's an error in disabling the feature flag.
+   */
+  fun disableFeatureFlag(code: String) {
+    updateFeatureFlag(code, mapOf("enabled" to false))
+  }
+
+  private fun parseMetadata(metadata: Any?): String {
+    return when (metadata) {
+      is Map<*, *> -> metadata.entries.joinToString(",") { "${it.key}:${it.value}" }
+      else -> ""
     }
-
-    // Disable a feature flag by its code
-    suspend fun disableFeatureFlag(code: String) {
-        updateFeatureFlag(code, mapOf("enabled" to false))
-    }
-
-    // Delete a feature flag by its code and remove it from the cache
-    suspend fun deleteFeatureFlag(code: String) {
-        // Retrieve the feature flag from the repository
-        val featureFlag = repository.getByCode(code) ?: throw Exception("Feature flag not found.")
-
-        // Delete the feature flag from the repository (database)
-        repository.delete(featureFlag.id)
-
-        // Remove the feature flag from the cache if caching is enabled
-        cache?.delete(code)
-    }
+  }
 }
