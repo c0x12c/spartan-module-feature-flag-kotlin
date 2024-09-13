@@ -12,10 +12,10 @@ object InstantSerializer : KSerializer<Instant> {
   override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Instant", PrimitiveKind.STRING)
 
   override fun serialize(encoder: Encoder, value: Instant) {
-    encoder.encodeString(value.toString())  // Serialize Instant as ISO-8601 string
+    encoder.encodeString(value.toString()) // Serialize Instant as ISO-8601 string
   }
 
   override fun deserialize(decoder: Decoder): Instant {
-    return Instant.parse(decoder.decodeString())  // Parse ISO-8601 string to Instant
+    return Instant.parse(decoder.decodeString()) // Parse ISO-8601 string to Instant
   }
 }

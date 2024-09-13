@@ -12,10 +12,10 @@ class UuidSerializer : KSerializer<UUID> {
   override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
 
   override fun serialize(encoder: Encoder, value: UUID) {
-    encoder.encodeString(value.toString())  // Serialize UUID as a string
+    encoder.encodeString(value.toString()) // Serialize UUID as a string
   }
 
   override fun deserialize(decoder: Decoder): UUID {
-    return UUID.fromString(decoder.decodeString())  // Deserialize string back into UUID
+    return UUID.fromString(decoder.decodeString()) // Deserialize string back into UUID
   }
 }

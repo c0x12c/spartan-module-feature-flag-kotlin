@@ -40,4 +40,18 @@ class RedisCache(
       false
     }
   }
+
+  fun clearAll(): Boolean {
+    return try {
+      // Find all keys that match the keyspace pattern
+      val keys = jedisCluster.keys("$keyspace:*")
+      if (keys.isNotEmpty()) {
+        // Delete all keys
+        jedisCluster.del(*keys.toTypedArray())
+      }
+      true
+    } catch (e: Exception) {
+      false
+    }
+  }
 }

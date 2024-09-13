@@ -1,5 +1,6 @@
 package com.c0x12c.featureflag.entity
 
+import jsonb
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -13,7 +14,7 @@ object FeatureFlags : UUIDTable("feature_flags") {
   val code = varchar("code", 50)
   val description = text("description").nullable()
   val enabled = bool("enabled")
-  val metadata = text("metadata")
+  val metadata = jsonb("metadata")
   val createdAt = timestamp("created_at").default(Instant.now())
   val updatedAt = timestamp("updated_at").nullable()
   val deletedAt = timestamp("deleted_at").nullable()
