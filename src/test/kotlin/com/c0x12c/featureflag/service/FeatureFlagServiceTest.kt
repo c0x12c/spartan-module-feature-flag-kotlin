@@ -13,6 +13,7 @@ import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class FeatureFlagServiceTest {
@@ -145,8 +146,7 @@ class FeatureFlagServiceTest {
       "enabled" to true
     )
 
-    every { repository.update(code, updateData) } returns true
-    every { repository.getByCode(code) } returns mapOf(
+    every { repository.update(code, updateData) } returns mapOf(
       "id" to UUID.randomUUID(),
       "name" to "New Name",
       "code" to code,
@@ -159,18 +159,17 @@ class FeatureFlagServiceTest {
     service.updateFeatureFlag(code, updateData)
 
     verify { repository.update(code, updateData) }
-    verify { repository.getByCode(code) }
     verify { cache.set(code, any(), 3600L) }
   }
 
   @Test
-  fun `updateFeatureFlag should throw FeatureFlagNotFoundError if flag not found`() {
+  fun `updateFeatureFlag should return null if flag not found`() {
     val code = "NONEXISTENT_FLAG"
     val updateData = mapOf("name" to "New Name")
 
-    every { repository.update(code, updateData) } returns false
+    every { repository.update(code, updateData) } returns null
 
-    assertThrows<FeatureFlagNotFoundError> {
+    assertFalse {
       service.updateFeatureFlag(code, updateData)
     }
 
@@ -225,8 +224,7 @@ class FeatureFlagServiceTest {
   fun `enableFeatureFlag should enable the flag`() {
     val code = "TEST_FLAG"
 
-    every { repository.update(code, mapOf("enabled" to true)) } returns true
-    every { repository.getByCode(code) } returns mapOf(
+    every { repository.update(code, mapOf("enabled" to true)) } returns mapOf(
       "id" to UUID.randomUUID(),
       "name" to "Test Flag",
       "code" to code,
@@ -239,7 +237,6 @@ class FeatureFlagServiceTest {
     service.enableFeatureFlag(code)
 
     verify { repository.update(code, mapOf("enabled" to true)) }
-    verify { repository.getByCode(code) }
     verify { cache.set(code, any(), 3600L) }
   }
 
@@ -247,8 +244,7 @@ class FeatureFlagServiceTest {
   fun `disableFeatureFlag should disable the flag`() {
     val code = "TEST_FLAG"
 
-    every { repository.update(code, mapOf("enabled" to false)) } returns true
-    every { repository.getByCode(code) } returns mapOf(
+    every { repository.update(code, mapOf("enabled" to false)) } returns mapOf(
       "id" to UUID.randomUUID(),
       "name" to "Test Flag",
       "code" to code,
@@ -261,7 +257,6 @@ class FeatureFlagServiceTest {
     service.disableFeatureFlag(code)
 
     verify { repository.update(code, mapOf("enabled" to false)) }
-    verify { repository.getByCode(code) }
     verify { cache.set(code, any(), 3600L) }
   }
 }

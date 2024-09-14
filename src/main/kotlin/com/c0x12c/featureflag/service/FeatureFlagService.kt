@@ -54,12 +54,18 @@ class FeatureFlagService(
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    * @throws FeatureFlagError If there's an error in updating the feature flag.
    */
-  fun updateFeatureFlag(code: String, flagData: Map<String, Any>) {
-    if (!repository.update(code, flagData)) {
-      throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
+  fun updateFeatureFlag(code: String, flagData: Map<String, Any>): Boolean {
+    // Attempt to update the feature flag in the repository
+    val updateResult = repository.update(code, flagData)
+
+    // If updateResult is not null, update the cache
+    if (updateResult != null) {
+      cache?.set(code, updateResult.toFeatureFlagCache(), cacheTTLSeconds)
+      return true
     }
-    val updatedFlag = repository.getByCode(code) ?: throw FeatureFlagError("Failed to retrieve updated flag")
-    cache?.set(code, updatedFlag.toFeatureFlagCache(), cacheTTLSeconds)
+
+    // Return false if the update failed (updateResult was null)
+    return false
   }
 
   /**
@@ -93,8 +99,8 @@ class FeatureFlagService(
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    * @throws FeatureFlagError If there's an error in enabling the feature flag.
    */
-  fun enableFeatureFlag(code: String) {
-    updateFeatureFlag(code, mapOf("enabled" to true))
+  fun enableFeatureFlag(code: String): Boolean {
+    return updateFeatureFlag(code, mapOf("enabled" to true))
   }
 
   /**
@@ -104,8 +110,8 @@ class FeatureFlagService(
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    * @throws FeatureFlagError If there's an error in disabling the feature flag.
    */
-  fun disableFeatureFlag(code: String) {
-    updateFeatureFlag(code, mapOf("enabled" to false))
+  fun disableFeatureFlag(code: String): Boolean {
+    return updateFeatureFlag(code, mapOf("enabled" to false))
   }
 
   private fun Map<String, Any>.toFeatureFlagCache(): FeatureFlagCache {

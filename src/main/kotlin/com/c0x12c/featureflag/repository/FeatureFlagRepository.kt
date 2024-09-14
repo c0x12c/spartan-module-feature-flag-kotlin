@@ -1,7 +1,7 @@
 package com.c0x12c.featureflag.repository
 
 import com.c0x12c.featureflag.entity.FeatureFlagEntity
-import com.c0x12c.featureflag.entity.FeatureFlags
+import com.c0x12c.featureflag.table.FeatureFlagTable
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -36,9 +36,9 @@ class FeatureFlagRepository(private val database: Database) {
     }
   }
 
-  fun update(code: String, flagData: Map<String, Any>): Boolean {
+  fun update(code: String, flagData: Map<String, Any>): Map<String, Any>? {
     return transaction(database) {
-      val flag = FeatureFlagEntity.find { FeatureFlags.code eq code }.singleOrNull() ?: return@transaction false
+      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction null
 
       flag.apply {
         name = flagData["name"] as? String ?: name
@@ -50,14 +50,13 @@ class FeatureFlagRepository(private val database: Database) {
           metadata
         }
         updatedAt = Instant.now()
-      }
-      true
+      }.toMap()
     }
   }
 
   fun delete(code: String): Boolean {
     return transaction(database) {
-      val flag = FeatureFlagEntity.find { FeatureFlags.code eq code }.singleOrNull() ?: return@transaction false
+      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction false
       flag.deletedAt = Instant.now()
       true
     }
@@ -65,7 +64,7 @@ class FeatureFlagRepository(private val database: Database) {
 
   fun getByCode(code: String): Map<String, Any>? {
     return transaction(database) {
-      FeatureFlagEntity.find { (FeatureFlags.code eq code) }.find {
+      FeatureFlagEntity.find { (FeatureFlagTable.code eq code) }.find {
         it.deletedAt == null
       }?.toMap()
     }
