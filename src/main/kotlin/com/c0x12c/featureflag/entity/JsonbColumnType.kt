@@ -1,8 +1,8 @@
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ColumnType
 import org.jetbrains.exposed.sql.Table
 import org.postgresql.util.PGobject
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 class JsonbColumnType : ColumnType() {
   private val objectMapper = jacksonObjectMapper()

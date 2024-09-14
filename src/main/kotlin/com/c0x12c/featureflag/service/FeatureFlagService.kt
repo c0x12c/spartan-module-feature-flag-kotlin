@@ -2,9 +2,9 @@ package com.c0x12c.featureflag.service
 
 import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlagCache
-import com.c0x12c.featureflag.repository.FeatureFlagRepository
 import com.c0x12c.featureflag.exception.FeatureFlagError
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import com.c0x12c.featureflag.repository.FeatureFlagRepository
 import java.time.Instant
 import java.util.UUID
 
