@@ -1,7 +1,7 @@
 plugins {
   kotlin("jvm") version "2.0.0"
   kotlin("plugin.serialization") version "2.0.0"
-  id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
+  id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
   id("jacoco")
   id("maven-publish")
   id("signing")
@@ -99,7 +99,7 @@ dependencies {
   testImplementation("org.postgresql:postgresql:42.7.4")
 
   // JUnit
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
 
   // MockK for mocking objects
