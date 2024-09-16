@@ -30,7 +30,7 @@ class FeatureFlagIntegrationTest {
   @Test
   fun `create and retrieve feature flag`() {
     val flagData = mapOf(
-      "name" to "Test Flag 1",
+      "name" to "Test Flag",
       "code" to "TEST_FLAG",
       "description" to "A test flag",
       "enabled" to true,
