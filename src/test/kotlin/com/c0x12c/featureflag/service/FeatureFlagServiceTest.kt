@@ -30,6 +30,7 @@ class FeatureFlagServiceTest {
   }
 
   @Test
+  @Suppress("UNCHECKED_CAST")
   fun `createFeatureFlag should create a new feature flag`() {
     val flagData = mapOf(
       "name" to "Test Flag",

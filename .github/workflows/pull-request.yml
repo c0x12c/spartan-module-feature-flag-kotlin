@@ -34,10 +34,10 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -53,7 +53,7 @@ jobs:
             gradle-${{ runner.os }}
 
       - name: Run Redis cluster
-        uses: vishnudxb/redis-cluster@1.0.5
+        uses: vishnudxb/redis-cluster@1.0.9
         with:
           master1-port: 30001
           master2-port: 30002
