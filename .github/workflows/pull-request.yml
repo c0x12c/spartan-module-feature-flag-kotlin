@@ -63,4 +63,14 @@ jobs:
         run: ./gradlew clean
 
       - name: Gradle Build & Test
-        run: ./gradlew build
+        run: ./gradlew build --info
+
+      - name: Run Tests and Generate Report
+        run: ./gradlew test --info
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: build/reports/tests/test
