@@ -58,6 +58,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
+        with:
+          arguments: clean build test --info  # Running all necessary gradle commands in one step
 
       - name: Gradle Clean
         run: ./gradlew clean
@@ -68,9 +70,10 @@ jobs:
       - name: Run Tests and Generate Report
         run: ./gradlew test --info
 
-      - name: Upload Test Report
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v1  # Action to display test results
         with:
-          name: test-reports
-          path: build/reports/tests/test
+          name: Gradle Tests
+          path: build/test-results/test/*.xml  # Path to your test result XML files
+          reporter: junit  # Specify JUnit as the report format
+          fail-on-error: false  # Continue the workflow even if there are test failures
