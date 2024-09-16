@@ -76,7 +76,7 @@ tasks.named("compileTestJava").configure {
 
 dependencies {
   implementation(kotlin("stdlib"))
-  implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+  implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
   implementation("com.squareup.retrofit2:retrofit:2.11.0")
   implementation("com.squareup.retrofit2:converter-gson:2.11.0")
