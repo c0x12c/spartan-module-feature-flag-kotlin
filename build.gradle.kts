@@ -79,7 +79,7 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
   implementation("com.squareup.retrofit2:retrofit:2.9.0")
-  implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+  implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
   implementation("javax.inject:javax.inject:1")
   implementation("redis.clients:jedis:5.1.5")
