@@ -1,137 +1,86 @@
 package com.c0x12c.featureflag.repository
 
-import com.c0x12c.featureflag.entity.FeatureFlag
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.PreparedStatement
+import com.c0x12c.featureflag.entity.FeatureFlagEntity
+import com.c0x12c.featureflag.table.FeatureFlagTable
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
 import java.util.UUID
 
-class FeatureFlagRepository(
-    private val jdbcUrl: String? = null,
-    private val username: String? = null,
-    private val password: String? = null
-) {
-    private val connection: Connection = DriverManager.getConnection(jdbcUrl, username, password)
+class FeatureFlagRepository(private val database: Database) {
+  private val objectMapper = jacksonObjectMapper()
 
-    // Insert method for creating a new feature flag
-    suspend fun insert(flag: FeatureFlag): UUID {
-        val sql = """
-            INSERT INTO feature_flags (id, name, code, description, enabled, metadata, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """.trimIndent()
-
-        connection.prepareStatement(sql).use { statement: PreparedStatement ->
-            statement.setObject(1, flag.id)
-            statement.setString(2, flag.name)
-            statement.setString(3, flag.code)
-            statement.setString(4, flag.description)
-            statement.setBoolean(5, flag.enabled)
-            statement.setObject(6, flag.metadata)
-            statement.setTimestamp(7, java.sql.Timestamp.from(flag.createdAt))
-            statement.executeUpdate()
-        }
-
-        return flag.id
+  fun insert(flagData: Map<String, Any>): UUID {
+    return transaction(database) {
+      FeatureFlagEntity.new {
+        name = flagData["name"] as String
+        code = flagData["code"] as String
+        description = flagData["description"] as? String ?: ""
+        enabled = flagData["enabled"] as? Boolean ?: false
+        metadata = objectMapper.writeValueAsString(flagData["metadata"] ?: emptyMap<String, Any>())
+        createdAt = Instant.now()
+      }.id.value
     }
+  }
 
-    // Get a feature flag by its ID
-    suspend fun getById(id: UUID): FeatureFlag? {
-        val sql = "SELECT * FROM feature_flags WHERE id = ?"
-        connection.prepareStatement(sql).use { statement: PreparedStatement ->
-            statement.setObject(1, id)
-            val resultSet = statement.executeQuery()
-
-            if (resultSet.next()) {
-                return FeatureFlag(
-                    id = UUID.fromString(resultSet.getString("id")),
-                    name = resultSet.getString("name"),
-                    code = resultSet.getString("code"),
-                    description = resultSet.getString("description"),
-                    enabled = resultSet.getBoolean("enabled"),
-                    metadata = resultSet.getObject("metadata") as Map<String, Any>?,
-                    createdAt = resultSet.getTimestamp("created_at").toInstant(),
-                    updatedAt = resultSet.getTimestamp("updated_at")?.toInstant()
-                )
-            }
-        }
-        return null
+  fun getById(id: UUID): Map<String, Any>? {
+    return transaction(database) {
+      FeatureFlagEntity.findById(id)?.toMap()
     }
+  }
 
-    // Get a feature flag by its code
-    suspend fun getByCode(code: String): FeatureFlag? {
-        val sql = "SELECT * FROM feature_flags WHERE code = ?"
-        connection.prepareStatement(sql).use { statement ->
-            statement.setString(1, code)
-            val resultSet = statement.executeQuery()
-
-            if (resultSet.next()) {
-                return FeatureFlag(
-                    id = UUID.fromString(resultSet.getString("id")),
-                    name = resultSet.getString("name"),
-                    code = resultSet.getString("code"),
-                    description = resultSet.getString("description"),
-                    enabled = resultSet.getBoolean("enabled"),
-                    metadata = resultSet.getObject("metadata") as Map<String, Any>?,
-                    createdAt = resultSet.getTimestamp("created_at").toInstant(),
-                    updatedAt = resultSet.getTimestamp("updated_at")?.toInstant()
-                )
-            }
-        }
-        return null
+  fun list(limit: Int = 100, offset: Int = 0): List<Map<String, Any>> {
+    return transaction(database) {
+      FeatureFlagEntity.all().limit(limit, offset.toLong()).map { it.toMap() }
     }
+  }
 
-    // List feature flags with pagination (limit and skip)
-    suspend fun list(limit: Int, skip: Int): List<FeatureFlag> {
-        val sql = "SELECT * FROM feature_flags LIMIT ? OFFSET ?"
-        val flags = mutableListOf<FeatureFlag>()
-        connection.prepareStatement(sql).use { statement ->
-            statement.setInt(1, limit)
-            statement.setInt(2, skip)
-            val resultSet = statement.executeQuery()
+  fun update(code: String, flagData: Map<String, Any>): Map<String, Any>? {
+    return transaction(database) {
+      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction null
 
-            while (resultSet.next()) {
-                flags.add(
-                    FeatureFlag(
-                        id = UUID.fromString(resultSet.getString("id")),
-                        name = resultSet.getString("name"),
-                        code = resultSet.getString("code"),
-                        description = resultSet.getString("description"),
-                        enabled = resultSet.getBoolean("enabled"),
-                        metadata = resultSet.getObject("metadata") as Map<String, Any>?,
-                        createdAt = resultSet.getTimestamp("created_at").toInstant(),
-                        updatedAt = resultSet.getTimestamp("updated_at")?.toInstant()
-                    )
-                )
-            }
+      flag.apply {
+        name = flagData["name"] as? String ?: name
+        description = flagData["description"] as? String ?: description ?: ""
+        enabled = flagData["enabled"] as? Boolean ?: enabled
+        metadata = if (flagData.containsKey("metadata")) {
+          objectMapper.writeValueAsString(flagData["metadata"] ?: emptyMap<String, Any>())
+        } else {
+          metadata
         }
-        return flags
+        updatedAt = Instant.now()
+      }.toMap()
     }
+  }
 
-    // Update an existing feature flag
-    suspend fun update(flag: FeatureFlag) {
-        val sql = """
-            UPDATE feature_flags
-            SET name = ?, description = ?, enabled = ?, metadata = ?, updated_at = ?
-            WHERE code = ?
-        """.trimIndent()
-
-        connection.prepareStatement(sql).use { statement: PreparedStatement ->
-            statement.setString(1, flag.name)
-            statement.setString(2, flag.description)
-            statement.setBoolean(3, flag.enabled)
-            statement.setObject(4, flag.metadata)
-            statement.setTimestamp(5, java.sql.Timestamp.from(flag.updatedAt ?: java.time.Instant.now()))
-            statement.setString(6, flag.code)
-            statement.executeUpdate()
-        }
+  fun delete(code: String): Boolean {
+    return transaction(database) {
+      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction false
+      flag.deletedAt = Instant.now()
+      true
     }
+  }
 
-    // Delete a feature flag by its ID
-    suspend fun delete(id: UUID) {
-        val sql = "DELETE FROM feature_flags WHERE id = ?"
-        connection.prepareStatement(sql).use { statement: PreparedStatement ->
-            statement.setObject(1, id)
-            statement.executeUpdate()
-        }
+  fun getByCode(code: String): Map<String, Any>? {
+    return transaction(database) {
+      FeatureFlagEntity.find { (FeatureFlagTable.code eq code) }.find {
+        it.deletedAt == null
+      }?.toMap()
     }
+  }
+
+  private fun FeatureFlagEntity.toMap(): Map<String, Any> {
+    return mapOf(
+      "id" to id.value,
+      "name" to name,
+      "code" to code,
+      "description" to (description ?: ""),
+      "enabled" to enabled,
+      "metadata" to objectMapper.readValue(metadata, Map::class.java),
+      "createdAt" to createdAt.toString(),
+      "updatedAt" to (updatedAt?.toString() ?: ""),
+      "deletedAt" to (deletedAt?.toString() ?: "")
+    )
+  }
 }
