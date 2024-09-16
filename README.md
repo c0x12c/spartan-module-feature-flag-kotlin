@@ -88,8 +88,8 @@ Please follow guidelines in [docs/RELEASE.md](./docs/RELEASE.md)
 
 <!-- readme: collaborators,contributors -start -->
 <table>
-    <tbody>
-       <tr>
+	<tbody>
+		<tr>
             <td align="center">
                 <a href="https://github.com/spartan-ductduong">
                     <img src="https://avatars.githubusercontent.com/u/112845152?v=4" width="100;" alt="spartan-ductduong"/>
@@ -104,7 +104,7 @@ Please follow guidelines in [docs/RELEASE.md](./docs/RELEASE.md)
                     <sub><b>Tony DangK</b></sub>
                 </a>
             </td>
-       </tr>
-    <tbody>
+		</tr>
+	<tbody>
 </table>
 <!-- readme: collaborators,contributors -end -->
