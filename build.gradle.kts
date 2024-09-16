@@ -1,42 +1,56 @@
 plugins {
   kotlin("jvm") version "2.0.0"
-
-  id("maven-publish")
-  id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
+  kotlin("plugin.serialization") version "2.0.0"
   id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
-  id("jacoco") // Apply the JaCoCo plugin
+  id("jacoco")
+  id("maven-publish")
+  id("signing")
+  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
-group = "com.c0x12c"
-version = "0.1.0"
+val GROUP = "com.c0x12c.feature.flag"
+var RELEASE_VERSION = "0.1.0"
 
-kotlin {
-  jvmToolchain {
-    (this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(17))
-  }
+if (System.getenv("RELEASE_VERSION") != null) {
+  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
+  println("Release version: $RELEASE_VERSION")
 }
 
-kotlin {
-  jvmToolchain(17)
-}
-
-jacoco {
-  toolVersion = "0.8.12" // Specify JaCoCo version
-}
+group = GROUP
+version = RELEASE_VERSION
 
 repositories {
   mavenCentral()
 }
 
+nexusPublishing {
+  repositories {
+    sonatype {
+      nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+      snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+      username.set(System.getenv("SONATYPE_USERNAME"))
+      password.set(System.getenv("SONATYPE_PASSWORD"))
+    }
+  }
+}
+
+kotlin {
+  jvmToolchain {
+    languageVersion.set(JavaLanguageVersion.of(17))
+  }
+}
+
+jacoco {
+  toolVersion = "0.8.12"
+}
+
 ktlint {
-  android.set(false) // Set to true if it's an Android project
+  android.set(false)
   outputToConsole.set(true)
   ignoreFailures.set(false)
-
   reporters {
     reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
   }
-  // Ensure it applies to Kotlin files in the correct directories
   filter {
     exclude("**/generated/**")
     include("**/src/main/kotlin/**")
@@ -68,7 +82,7 @@ dependencies {
   implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
   implementation("javax.inject:javax.inject:1")
-  implementation("redis.clients:jedis:5.1.2")
+  implementation("redis.clients:jedis:5.1.5")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 
   implementation("org.jetbrains.exposed:exposed-core:0.49.0")
@@ -101,31 +115,58 @@ dependencies {
 
 tasks.test {
   useJUnitPlatform()
-  finalizedBy(tasks.jacocoTestReport) // Generate coverage report after tests run
+  finalizedBy(tasks.jacocoTestReport)
   reports {
     junitXml.required.set(true)
   }
 }
 
 tasks.jacocoTestReport {
-  dependsOn(tasks.test) // Ensure tests run first
+  dependsOn(tasks.test)
   reports {
-    xml.required.set(true) // Generate XML report for GitHub Actions
-    html.required.set(true) // Generate HTML report for local viewing
+    xml.required.set(true)
+    html.required.set(true)
   }
+}
+
+java {
+  withJavadocJar()
+  withSourcesJar()
 }
 
 publishing {
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["java"])
-      artifactId = "feature-flag-module"
-    }
-  }
+      artifactId = "module-feature-flag"
 
-  repositories {
-    maven {
-      url = uri("https://repo.yourpublishingserver.com/releases") // Replace with actual repo
+      pom {
+        name.set("Feature Flag Module")
+        description.set("A module for managing feature flags")
+        url.set("https://github.com/c0x12c/feature-flag-module")
+        licenses {
+          license {
+            name.set("Apache License, Version 2.0")
+            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+          }
+        }
+        developers {
+          developer {
+            id.set("spartan-dev")
+            name.set("Spartan Dev")
+            email.set("chan@c0x12c.com")
+          }
+        }
+        scm {
+          connection.set("scm:git:git://github.com/c0x12c/spartan-module-feature-flag-kotlin.git")
+          developerConnection.set("scm:git:ssh://github.com:c0x12c/spartan-module-feature-flag-kotlin.git")
+          url.set("https://github.com/c0x12c/spartan-module-feature-flag-kotlin")
+        }
+      }
     }
   }
+}
+
+signing {
+  sign(publishing.publications["mavenJava"])
 }
