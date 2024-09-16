@@ -68,7 +68,7 @@ dependencies {
   implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
   implementation("javax.inject:javax.inject:1")
-  implementation("redis.clients:jedis:5.1.2")
+  implementation("redis.clients:jedis:5.1.5")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 
   implementation("org.jetbrains.exposed:exposed-core:0.49.0")
