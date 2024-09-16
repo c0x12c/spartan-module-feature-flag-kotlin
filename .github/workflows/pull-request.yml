@@ -15,11 +15,7 @@ on:
       - '.editorconfig'
 
 concurrency:
-  # github.workflow: name of the workflow
-  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-
-  # Cancel in-progress runs when a new workflow with the same group name is triggered
   cancel-in-progress: true
 
 jobs:
@@ -56,30 +52,30 @@ jobs:
           slave2-port: 30005
           slave3-port: 30006
 
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: github-app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          arguments: clean build test --info  # Running all necessary gradle commands in one step
+          arguments: clean build test jacocoTestReport --info
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v1
-        if: success() || failure()    # run this step even if previous step failed
+        if: success() || failure()
         with:
           name: Gradle Tests
           path: build/test-results/test/*.xml
           reporter: java-junit
           fail-on-error: false
 
-      - name: Upload Code Coverage Report
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
         with:
-          name: code-coverage-report
-          path: build/reports/jacoco/test/html  # Path to the HTML report
-
-      - name: Display Code Coverage
-        uses: dorny/coverage-check@v2
-        with:
-          check-name: 'Code Coverage Report'
-          path: build/reports/jacoco/test/jacocoTestReport.xml  # Path to the XML report
-          threshold: 80 # Optional: Set your code coverage threshold percentage
-          annotations: detailed  # Displays detailed annotations in pull requests
+          github-token: ${{ steps.github-app-token.outputs.token }}
+          file: build/reports/jacoco/test/jacocoTestReport.xml
+          format: jacoco
