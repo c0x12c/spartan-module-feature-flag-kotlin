@@ -64,11 +64,3 @@ jobs:
 
       - name: Run Gradle test
         run: ./gradlew test --no-daemon
-
-      - name: Cache Gradle test results
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/test-results
-          key: gradle-test-${{ runner.os }}-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            gradle-test-${{ runner.os }}
