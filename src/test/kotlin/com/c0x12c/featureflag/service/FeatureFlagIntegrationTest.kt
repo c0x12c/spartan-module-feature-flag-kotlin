@@ -61,7 +61,6 @@ class FeatureFlagIntegrationTest {
     )
 
     service.createFeatureFlag(flagData)
-
     service.updateFeatureFlag(
       "UPDATE_FLAG",
       mapOf(
