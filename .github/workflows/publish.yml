@@ -22,11 +22,18 @@ jobs:
       id-token: "write"
 
     steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: github-app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
       - name: Checkout source
         uses: actions/checkout@v3
         with:
           fetch-depth: 3
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.github-app-token.outputs.token }}
 
       - name: Set Env
         run: |
