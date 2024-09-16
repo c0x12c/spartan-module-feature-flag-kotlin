@@ -4,6 +4,7 @@ plugins {
   id("maven-publish")
   id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
   id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
+  id("jacoco") // Apply the JaCoCo plugin
 }
 
 group = "com.c0x12c"
@@ -15,10 +16,12 @@ kotlin {
   }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-  kotlinOptions {
-    jvmTarget = "17"
-  }
+kotlin {
+  jvmToolchain(17)
+}
+
+jacoco {
+  toolVersion = "0.8.12" // Specify JaCoCo version
 }
 
 repositories {
@@ -98,8 +101,17 @@ dependencies {
 
 tasks.test {
   useJUnitPlatform()
+  finalizedBy(tasks.jacocoTestReport) // Generate coverage report after tests run
   reports {
     junitXml.required.set(true)
+  }
+}
+
+tasks.jacocoTestReport {
+  dependsOn(tasks.test) // Ensure tests run first
+  reports {
+    xml.required.set(true) // Generate XML report for GitHub Actions
+    html.required.set(true) // Generate HTML report for local viewing
   }
 }
 

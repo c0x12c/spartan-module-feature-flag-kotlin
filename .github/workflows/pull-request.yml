@@ -69,3 +69,17 @@ jobs:
           path: build/test-results/test/*.xml
           reporter: java-junit
           fail-on-error: false
+
+      - name: Upload Code Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: build/reports/jacoco/test/html  # Path to the HTML report
+
+      - name: Display Code Coverage
+        uses: dorny/coverage-check@v2
+        with:
+          check-name: 'Code Coverage Report'
+          path: build/reports/jacoco/test/jacocoTestReport.xml  # Path to the XML report
+          threshold: 80 # Optional: Set your code coverage threshold percentage
+          annotations: detailed  # Displays detailed annotations in pull requests
