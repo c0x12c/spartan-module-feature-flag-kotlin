@@ -18,16 +18,13 @@ class FeatureFlagEntity(id: EntityID<UUID>) : UUIDEntity(id) {
   var updatedAt by FeatureFlagTable.updatedAt
   var deletedAt by FeatureFlagTable.deletedAt
 
-  fun toFeatureFlag() = FeatureFlagCache(
+  fun toFeatureFlag() = FeatureFlag(
     id = id.value,
     name = name,
     code = code,
     description = description,
     enabled = enabled,
-    metadata = metadata.split(",").associate {
-      val (key, value) = it.split(":")
-      key to value
-    },
+    metadata = metadata,
     createdAt = createdAt,
     updatedAt = updatedAt,
     deletedAt = deletedAt

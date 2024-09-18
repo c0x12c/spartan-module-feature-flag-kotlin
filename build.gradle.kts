@@ -1,23 +1,24 @@
 plugins {
-  kotlin("jvm") version "2.0.0"
-  kotlin("plugin.serialization") version "2.0.0"
-  id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
+  kotlin("jvm") version "1.9.23"
+  kotlin("plugin.serialization") version "1.9.23"
+  id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
   id("jacoco")
   id("maven-publish")
   id("signing")
   id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+  id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
-val GROUP = "com.c0x12c.feature.flag"
-var RELEASE_VERSION = "0.1.0"
+// val GROUP = "com.c0x12c.feature.flag"
+// var RELEASE_VERSION = "0.1.0"
+//
+// if (System.getenv("RELEASE_VERSION") != null) {
+//  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
+//  println("Release version: $RELEASE_VERSION")
+// }
 
-if (System.getenv("RELEASE_VERSION") != null) {
-  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
-  println("Release version: $RELEASE_VERSION")
-}
-
-group = GROUP
-version = RELEASE_VERSION
+group = "com.c0x12c.feature.flag"
+version = "0.0.1"
 
 repositories {
   mavenCentral()
@@ -77,7 +78,7 @@ tasks.named("compileTestJava").configure {
 dependencies {
   implementation(kotlin("stdlib"))
   implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2")
+  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
   implementation("com.squareup.retrofit2:retrofit:2.11.0")
   implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 

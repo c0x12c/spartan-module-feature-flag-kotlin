@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.feature_flags
     code        VARCHAR(255)             NOT NULL UNIQUE,
     description TEXT,
     enabled     BOOLEAN                  NOT NULL DEFAULT FALSE,
-    metadata    jsonb,
+    metadata    TEXT,
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMP WITH TIME ZONE,
     deleted_at  TIMESTAMP WITH TIME ZONE

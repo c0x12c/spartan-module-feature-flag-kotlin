@@ -1,56 +1,51 @@
 package com.c0x12c.featureflag.repository
 
+import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.entity.FeatureFlagEntity
 import com.c0x12c.featureflag.table.FeatureFlagTable
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.util.UUID
 
 class FeatureFlagRepository(private val database: Database) {
-  private val objectMapper = jacksonObjectMapper()
 
-  fun insert(flagData: Map<String, Any>): UUID {
+  fun insert(featureFlag: FeatureFlag): UUID {
     return transaction(database) {
       FeatureFlagEntity.new {
-        name = flagData["name"] as String
-        code = flagData["code"] as String
-        description = flagData["description"] as? String ?: ""
-        enabled = flagData["enabled"] as? Boolean ?: false
-        metadata = objectMapper.writeValueAsString(flagData["metadata"] ?: emptyMap<String, Any>())
+        name = featureFlag.name
+        code = featureFlag.code
+        description = featureFlag.description
+        enabled = featureFlag.enabled
+        metadata = featureFlag.metadata
         createdAt = Instant.now()
       }.id.value
     }
   }
 
-  fun getById(id: UUID): Map<String, Any>? {
+  fun getById(id: UUID): FeatureFlag? {
     return transaction(database) {
-      FeatureFlagEntity.findById(id)?.toMap()
+      FeatureFlagEntity.findById(id)?.toFeatureFlag()
     }
   }
 
-  fun list(limit: Int = 100, offset: Int = 0): List<Map<String, Any>> {
+  fun list(limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
     return transaction(database) {
-      FeatureFlagEntity.all().limit(limit, offset.toLong()).map { it.toMap() }
+      FeatureFlagEntity.all().limit(limit, offset.toLong()).map { it.toFeatureFlag() }
     }
   }
 
-  fun update(code: String, flagData: Map<String, Any>): Map<String, Any>? {
+  fun update(code: String, featureFlag: FeatureFlag): FeatureFlag? {
     return transaction(database) {
       val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction null
 
       flag.apply {
-        name = flagData["name"] as? String ?: name
-        description = flagData["description"] as? String ?: description ?: ""
-        enabled = flagData["enabled"] as? Boolean ?: enabled
-        metadata = if (flagData.containsKey("metadata")) {
-          objectMapper.writeValueAsString(flagData["metadata"] ?: emptyMap<String, Any>())
-        } else {
-          metadata
-        }
+        name = featureFlag.name
+        description = featureFlag.description
+        enabled = featureFlag.enabled
+        metadata = featureFlag.metadata
         updatedAt = Instant.now()
-      }.toMap()
+      }.toFeatureFlag()
     }
   }
 
@@ -62,25 +57,11 @@ class FeatureFlagRepository(private val database: Database) {
     }
   }
 
-  fun getByCode(code: String): Map<String, Any>? {
+  fun getByCode(code: String): FeatureFlag? {
     return transaction(database) {
       FeatureFlagEntity.find { (FeatureFlagTable.code eq code) }.find {
         it.deletedAt == null
-      }?.toMap()
+      }?.toFeatureFlag()
     }
-  }
-
-  private fun FeatureFlagEntity.toMap(): Map<String, Any> {
-    return mapOf(
-      "id" to id.value,
-      "name" to name,
-      "code" to code,
-      "description" to (description ?: ""),
-      "enabled" to enabled,
-      "metadata" to objectMapper.readValue(metadata, Map::class.java),
-      "createdAt" to createdAt.toString(),
-      "updatedAt" to (updatedAt?.toString() ?: ""),
-      "deletedAt" to (deletedAt?.toString() ?: "")
-    )
   }
 }

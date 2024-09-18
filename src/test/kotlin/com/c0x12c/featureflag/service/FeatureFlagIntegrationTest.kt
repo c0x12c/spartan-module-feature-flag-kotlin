@@ -1,9 +1,12 @@
 package com.c0x12c.featureflag.service
 
+import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
 import com.c0x12c.featureflag.service.utils.TestUtils
 import com.c0x12c.featureflag.service.utils.TestUtils.redisCache
 import com.c0x12c.featureflag.service.utils.TestUtils.service
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -29,63 +32,62 @@ class FeatureFlagIntegrationTest {
 
   @Test
   fun `create and retrieve feature flag`() {
-    val flagData = mapOf(
-      "name" to "Test Flag",
-      "code" to "TEST_FLAG",
-      "description" to "A test flag",
-      "enabled" to true,
-      "metadata" to mapOf("key" to "value")
+    val featureFlag = FeatureFlag(
+      name = "Test Flag",
+      code = "TEST_FLAG",
+      description = "A test flag",
+      enabled = true,
+      metadata = JsonObject(mapOf("key" to JsonPrimitive("value"))).toString()
     )
 
-    val createdFlag = service.createFeatureFlag(flagData)
+    val createdFlag = service.createFeatureFlag(featureFlag)
 
     assertNotNull(createdFlag)
-    assertEquals("Test Flag", createdFlag["name"])
-    assertEquals("TEST_FLAG", createdFlag["code"])
+    assertEquals("Test Flag", createdFlag.name)
+    assertEquals("TEST_FLAG", createdFlag.code)
 
     val retrievedFlag = service.getFeatureFlagByCode("TEST_FLAG")
 
     assertNotNull(retrievedFlag)
-    assertEquals("Test Flag", retrievedFlag["name"])
-    assertEquals("TEST_FLAG", retrievedFlag["code"])
-    assertEquals(true, retrievedFlag["enabled"])
-    assertEquals(mapOf("key" to "value"), retrievedFlag["metadata"])
+    assertEquals("Test Flag", retrievedFlag.name)
+    assertEquals("TEST_FLAG", retrievedFlag.code)
+    assertEquals(true, retrievedFlag.enabled)
+    assertEquals(JsonObject(mapOf("key" to JsonPrimitive("value"))), service.getMetadataAsJsonObject(retrievedFlag))
   }
 
   @Test
   fun `update feature flag`() {
-    val flagData = mapOf(
-      "name" to "Original Flag",
-      "code" to "UPDATE_FLAG",
-      "enabled" to false
+    val originalFlag = FeatureFlag(
+      name = "Original Flag",
+      code = "UPDATE_FLAG",
+      enabled = false
     )
 
-    service.createFeatureFlag(flagData)
+    service.createFeatureFlag(originalFlag)
 
-    service.updateFeatureFlag(
-      "UPDATE_FLAG",
-      mapOf(
-        "name" to "Updated Flag",
-        "enabled" to true
-      )
+    val updatedFlag = originalFlag.copy(
+      name = "Updated Flag",
+      enabled = true
     )
 
-    val updatedFlag = service.getFeatureFlagByCode("UPDATE_FLAG")
+    service.updateFeatureFlag("UPDATE_FLAG", updatedFlag)
 
-    assertNotNull(updatedFlag)
-    assertEquals("Updated Flag", updatedFlag["name"])
-    assertEquals(true, updatedFlag["enabled"])
+    val retrievedFlag = service.getFeatureFlagByCode("UPDATE_FLAG")
+
+    assertNotNull(retrievedFlag)
+    assertEquals("Updated Flag", retrievedFlag.name)
+    assertEquals(true, retrievedFlag.enabled)
   }
 
   @Test
   fun `delete feature flag`() {
-    val flagData = mapOf(
-      "name" to "To Be Deleted",
-      "code" to "DELETE_FLAG",
-      "enabled" to true
+    val featureFlag = FeatureFlag(
+      name = "To Be Deleted",
+      code = "DELETE_FLAG",
+      enabled = true
     )
 
-    service.createFeatureFlag(flagData)
+    service.createFeatureFlag(featureFlag)
     service.deleteFeatureFlag("DELETE_FLAG")
 
     assertThrows<FeatureFlagNotFoundError> {
@@ -95,15 +97,15 @@ class FeatureFlagIntegrationTest {
 
   @Test
   fun `list feature flags`() {
-    val flag1 = mapOf(
-      "name" to "Flag 1",
-      "code" to "FLAG_1",
-      "enabled" to true
+    val flag1 = FeatureFlag(
+      name = "Flag 1",
+      code = "FLAG_1",
+      enabled = true
     )
-    val flag2 = mapOf(
-      "name" to "Flag 2",
-      "code" to "FLAG_2",
-      "enabled" to false
+    val flag2 = FeatureFlag(
+      name = "Flag 2",
+      code = "FLAG_2",
+      enabled = false
     )
 
     service.createFeatureFlag(flag1)
@@ -112,26 +114,26 @@ class FeatureFlagIntegrationTest {
     val flags = service.listFeatureFlags()
 
     assertEquals(2, flags.size)
-    assertEquals("Flag 1", flags[0]["name"])
-    assertEquals("Flag 2", flags[1]["name"])
+    assertEquals("Flag 1", flags[0].name)
+    assertEquals("Flag 2", flags[1].name)
   }
 
   @Test
   fun `enable and disable feature flag`() {
-    val flagData = mapOf(
-      "name" to "Toggle Flag",
-      "code" to "TOGGLE_FLAG",
-      "enabled" to false
+    val featureFlag = FeatureFlag(
+      name = "Toggle Flag",
+      code = "TOGGLE_FLAG",
+      enabled = false
     )
 
-    service.createFeatureFlag(flagData)
+    service.createFeatureFlag(featureFlag)
 
     service.enableFeatureFlag("TOGGLE_FLAG")
     var flag = service.getFeatureFlagByCode("TOGGLE_FLAG")
-    assertEquals(true, flag["enabled"])
+    assertEquals(true, flag.enabled)
 
     service.disableFeatureFlag("TOGGLE_FLAG")
     flag = service.getFeatureFlagByCode("TOGGLE_FLAG")
-    assertEquals(false, flag["enabled"])
+    assertEquals(false, flag.enabled)
   }
 }

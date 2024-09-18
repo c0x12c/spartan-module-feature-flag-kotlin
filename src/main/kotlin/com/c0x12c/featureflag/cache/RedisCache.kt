@@ -1,6 +1,6 @@
 package com.c0x12c.featureflag.cache
 
-import com.c0x12c.featureflag.entity.FeatureFlagCache
+import com.c0x12c.featureflag.entity.FeatureFlag
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import redis.clients.jedis.JedisCluster
@@ -13,7 +13,7 @@ class RedisCache(
     return "$keyspace:$key"
   }
 
-  fun set(key: String, value: FeatureFlagCache, ttlSeconds: Long): Boolean {
+  fun set(key: String, value: FeatureFlag, ttlSeconds: Long): Boolean {
     return try {
       val serializedValue = Json.encodeToString(value)
       val redisKey = keyFrom(key)
@@ -24,10 +24,10 @@ class RedisCache(
     }
   }
 
-  fun get(key: String): FeatureFlagCache? {
+  fun get(key: String): FeatureFlag? {
     return try {
       val result = jedisCluster.get(keyFrom(key)) ?: return null
-      Json.decodeFromString<FeatureFlagCache>(result)
+      Json.decodeFromString<FeatureFlag>(result)
     } catch (e: Exception) {
       null
     }
@@ -43,10 +43,8 @@ class RedisCache(
 
   fun clearAll(): Boolean {
     return try {
-      // Find all keys that match the keyspace pattern
       val keys = jedisCluster.keys("$keyspace:*")
       if (keys.isNotEmpty()) {
-        // Delete all keys
         jedisCluster.del(*keys.toTypedArray())
       }
       true
