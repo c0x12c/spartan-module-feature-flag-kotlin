@@ -5,16 +5,16 @@ plugins {
   id("jacoco")
   id("maven-publish")
   id("signing")
-  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+  id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
 
 val GROUP = "com.c0x12c.feature.flag"
-var RELEASE_VERSION = "0.1.0"
+var RELEASE_VERSION = "0.0.6"
 
-if (System.getenv("RELEASE_VERSION") != null) {
-  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
-  println("Release version: $RELEASE_VERSION")
-}
+//if (System.getenv("RELEASE_VERSION") != null) {
+//  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
+//  println("Release version: $RELEASE_VERSION")
+//}
 
 group = GROUP
 version = RELEASE_VERSION
@@ -28,8 +28,8 @@ nexusPublishing {
     sonatype {
       nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
       snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-      username.set(System.getenv("SONATYPE_USERNAME"))
-      password.set(System.getenv("SONATYPE_PASSWORD"))
+      username.set(findProperty("SONATYPE_USERNAME") as String? ?: System.getenv("SONATYPE_USERNAME"))
+      password.set(findProperty("SONATYPE_PASSWORD") as String? ?: System.getenv("SONATYPE_PASSWORD"))
     }
   }
 }
@@ -95,19 +95,11 @@ dependencies {
   implementation("com.zaxxer:HikariCP:5.0.1")
 
   testImplementation(kotlin("test"))
-
   testImplementation("org.postgresql:postgresql:42.7.4")
-
-  // JUnit
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
-
-  // MockK for mocking objects
   testImplementation("io.mockk:mockk:1.13.12")
-
-  // Coroutines for suspend functions
   testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
-
   testImplementation("org.testcontainers:testcontainers:1.20.1")
   testImplementation("org.testcontainers:postgresql:1.20.1")
   testImplementation("org.testcontainers:junit-jupiter:1.20.1")
@@ -169,4 +161,26 @@ publishing {
 
 signing {
   sign(publishing.publications["mavenJava"])
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+  dependsOn("verifyGpgSigning")
+}
+
+tasks.withType<PublishToMavenLocal>().configureEach {
+  dependsOn("verifyGpgSigning")
+}
+
+tasks.register("verifyGpgSigning") {
+  doLast {
+    val keyId = findProperty("signing.keyId") as String?
+    val password = findProperty("signing.password") as String?
+    val secretKeyRingFile = findProperty("signing.secretKeyRingFile") as String?
+
+    if (keyId == null || password == null || secretKeyRingFile == null) {
+      throw GradleException("GPG Signing is not properly configured. Make sure signing.keyId, signing.password, and signing.secretKeyRingFile are set in your gradle.properties file.")
+    } else {
+      println("GPG Signing is properly configured.")
+    }
+  }
 }
