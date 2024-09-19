@@ -14,19 +14,8 @@ class FeatureFlagEntity(id: EntityID<UUID>) : UUIDEntity(id) {
   var description by FeatureFlagTable.description
   var enabled by FeatureFlagTable.enabled
   var metadata by FeatureFlagTable.metadata
+  var metadataType by FeatureFlagTable.metadataType
   var createdAt by FeatureFlagTable.createdAt
   var updatedAt by FeatureFlagTable.updatedAt
   var deletedAt by FeatureFlagTable.deletedAt
-
-  fun toFeatureFlag() = FeatureFlag(
-    id = id.value,
-    name = name,
-    code = code,
-    description = description,
-    enabled = enabled,
-    metadata = metadata,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    deletedAt = deletedAt
-  )
 }

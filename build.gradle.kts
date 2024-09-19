@@ -9,16 +9,15 @@ plugins {
   id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
-// val GROUP = "com.c0x12c.feature.flag"
-// var RELEASE_VERSION = "0.1.0"
-//
-// if (System.getenv("RELEASE_VERSION") != null) {
-//  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
-//  println("Release version: $RELEASE_VERSION")
-// }
+var RELEASE_VERSION = "0.1.0"
 
-group = "com.c0x12c.feature.flag"
-version = "0.0.1"
+if (System.getenv("RELEASE_VERSION") != null) {
+  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
+  println("Release version: $RELEASE_VERSION")
+}
+
+group = "com.c0x12c.featureflag"
+version = RELEASE_VERSION
 
 repositories {
   mavenCentral()
@@ -94,6 +93,8 @@ dependencies {
   implementation("org.postgresql:postgresql:42.4.1")
   implementation("net.postgis:postgis-jdbc:2.5.1")
   implementation("com.zaxxer:HikariCP:5.0.1")
+  implementation("com.goncalossilva:murmurhash:0.4.0")
+  implementation("org.apache.maven:maven-artifact:3.9.9")
 
   testImplementation(kotlin("test"))
 

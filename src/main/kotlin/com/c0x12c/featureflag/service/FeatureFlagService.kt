@@ -4,11 +4,21 @@ import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagError
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
+import com.goncalossilva.murmurhash.MurmurHash3
+import org.apache.maven.artifact.versioning.ComparableVersion
+import java.time.Duration
+import java.time.Instant
+import kotlin.math.absoluteValue
 
+/**
+ * Service class for managing feature flags.
+ *
+ * @property repository The repository for feature flag data access.
+ * @property cache Optional Redis cache for feature flags.
+ * @property cacheTTLSeconds Time-to-live for cached feature flags in seconds.
+ */
 class FeatureFlagService(
   private val repository: FeatureFlagRepository,
   private val cache: RedisCache? = null,
@@ -16,11 +26,11 @@ class FeatureFlagService(
 ) {
 
   /**
-   * Create a new feature flag.
+   * Creates a new feature flag.
    *
-   * @param featureFlag FeatureFlag object containing the feature flag data.
-   * @return The created feature flag as a FeatureFlag object.
-   * @throws FeatureFlagError If there's an error in creating the feature flag.
+   * @param featureFlag The feature flag to create.
+   * @return The created feature flag.
+   * @throws FeatureFlagError If the created flag cannot be retrieved.
    */
   fun createFeatureFlag(featureFlag: FeatureFlag): FeatureFlag {
     val createdFlagId = repository.insert(featureFlag)
@@ -30,16 +40,14 @@ class FeatureFlagService(
   }
 
   /**
-   * Retrieve a feature flag by its code.
+   * Retrieves a feature flag by its code.
    *
    * @param code The code of the feature flag.
-   * @return The feature flag as a FeatureFlag object.
+   * @return The feature flag.
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    */
   fun getFeatureFlagByCode(code: String): FeatureFlag {
-    cache?.get(code)?.let {
-      return it
-    }
+    cache?.get(code)?.let { return it }
 
     val featureFlag = repository.getByCode(code) ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
     cache?.set(code, featureFlag, cacheTTLSeconds)
@@ -47,11 +55,11 @@ class FeatureFlagService(
   }
 
   /**
-   * Update an existing feature flag.
+   * Updates an existing feature flag.
    *
    * @param code The code of the feature flag to update.
-   * @param featureFlag FeatureFlag object containing the updated feature flag data.
-   * @return The updated feature flag as a FeatureFlag object.
+   * @param featureFlag The updated feature flag data.
+   * @return The updated feature flag.
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    */
   fun updateFeatureFlag(code: String, featureFlag: FeatureFlag): FeatureFlag {
@@ -61,7 +69,7 @@ class FeatureFlagService(
   }
 
   /**
-   * Delete a feature flag.
+   * Deletes a feature flag.
    *
    * @param code The code of the feature flag to delete.
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
@@ -74,61 +82,174 @@ class FeatureFlagService(
   }
 
   /**
-   * List feature flags with optional pagination.
+   * Lists feature flags with pagination.
    *
-   * @param limit The maximum number of feature flags to return.
-   * @param offset The number of feature flags to skip.
-   * @return A list of FeatureFlag objects.
+   * @param limit Maximum number of flags to return.
+   * @param offset Number of flags to skip.
+   * @return List of feature flags.
    */
   fun listFeatureFlags(limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
     return repository.list(limit, offset)
   }
 
   /**
-   * Enable a feature flag.
+   * Finds feature flags by metadata type.
    *
-   * @param code The code of the feature flag to enable.
-   * @return The updated FeatureFlag object with enabled set to true.
-   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   * @param type The metadata type to search for.
+   * @param limit Maximum number of flags to return.
+   * @param offset Number of flags to skip.
+   * @return List of feature flags matching the metadata type.
    */
-  fun enableFeatureFlag(code: String): FeatureFlag {
-    val flag = getFeatureFlagByCode(code)
-    return updateFeatureFlag(code, flag.copy(enabled = true))
+  fun findFeatureFlagsByMetadataType(type: String, limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
+    return repository.findByMetadataType(type, limit, offset)
   }
 
   /**
-   * Disable a feature flag.
+   * Checks if a feature flag is enabled for the given context.
    *
-   * @param code The code of the feature flag to disable.
-   * @return The updated FeatureFlag object with enabled set to false.
-   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   * @param code The code of the feature flag.
+   * @param context The context for evaluating the feature flag.
+   * @return True if the feature flag is enabled, false otherwise.
    */
-  fun disableFeatureFlag(code: String): FeatureFlag {
+  fun isFeatureFlagEnabled(code: String, context: Map<String, Any>): Boolean {
     val flag = getFeatureFlagByCode(code)
-    return updateFeatureFlag(code, flag.copy(enabled = false))
+
+    // If the flag is not enabled, return false immediately
+    if (!flag.enabled) return false
+
+    // If there's no metadata, return true since the flag is enabled
+    val metadata = flag.metadata ?: return true
+
+    return when (metadata) {
+      is MetadataContent.UserTargeting -> isUserTargeted(metadata, context)
+      is MetadataContent.GroupTargeting -> isGroupTargeted(metadata, context)
+      is MetadataContent.TimeBasedActivation -> isTimeBasedActivated(metadata)
+      is MetadataContent.GradualRollout -> isGraduallyRolledOut(metadata, context)
+      is MetadataContent.ABTestingConfig -> isABTestingEnabled(metadata, context)
+      is MetadataContent.VersionTargeting -> isVersionTargeted(metadata, context)
+      is MetadataContent.GeographicTargeting -> isGeographicallyTargeted(metadata, context)
+      is MetadataContent.DeviceTargeting -> isDeviceTargeted(metadata, context)
+      is MetadataContent.CustomRules -> areCustomRulesSatisfied(metadata, context)
+    }
   }
 
   /**
-   * Convert the metadata of a FeatureFlag from a JSON string to a JsonObject.
-   *
-   * @param featureFlag The FeatureFlag object containing the metadata.
-   * @return The metadata as a JsonObject.
+   * Checks if the feature flag is enabled for the given group.
    */
-  fun getMetadataAsJsonObject(featureFlag: FeatureFlag): JsonObject {
-    return Json.parseToJsonElement(featureFlag.metadata).jsonObject
+  private fun isGroupTargeted(metadata: MetadataContent.GroupTargeting, context: Map<String, Any>): Boolean {
+    val groupId = context["groupId"] as? String ?: return false
+    return groupId in metadata.groupIds && isTargetedBasedOnPercentage(groupId, metadata.percentage)
   }
 
   /**
-   * Update the metadata of a feature flag.
-   *
-   * @param code The code of the feature flag to update.
-   * @param newMetadata The new metadata as a JsonObject.
-   * @return The updated FeatureFlag object.
-   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   * Checks if the feature flag is enabled for the given user.
    */
-  fun updateMetadata(code: String, newMetadata: JsonObject): FeatureFlag {
-    val flag = getFeatureFlagByCode(code)
-    val updatedMetadata = Json.encodeToString(JsonObject.serializer(), newMetadata)
-    return updateFeatureFlag(code, flag.copy(metadata = updatedMetadata))
+  private fun isUserTargeted(metadata: MetadataContent.UserTargeting, context: Map<String, Any>): Boolean {
+    val userId = context["userId"] as? String ?: return false
+    return userId in metadata.userIds && isTargetedBasedOnPercentage(userId, metadata.percentage)
+  }
+
+  /**
+   * Calculates if the feature flag should be activated based on the percentage and a hash of the identifier.
+   */
+  private fun isTargetedBasedOnPercentage(identifier: String, percentage: Double): Boolean {
+    val hash = identifier.murmur128x64().first.absoluteValue
+    val hashPercentage = (hash % 100) + 1
+    return hashPercentage <= percentage
+  }
+
+  /**
+   * Checks if the feature flag is active based on the current time.
+   */
+  private fun isTimeBasedActivated(metadata: MetadataContent.TimeBasedActivation): Boolean {
+    val now = Instant.now()
+    return now.isAfter(metadata.startTime) && now.isBefore(metadata.endTime)
+  }
+
+  /**
+   * Checks if the feature flag is enabled based on gradual rollout configuration.
+   */
+  private fun isGraduallyRolledOut(metadata: MetadataContent.GradualRollout, context: Map<String, Any>): Boolean {
+    val userId = context["userId"] as? String ?: return false
+    val userHash = userId.murmur128x64().first.absoluteValue
+    val now = Instant.now()
+
+    when {
+      now.isBefore(metadata.startTime) -> return userHash % 100 < metadata.startPercentage
+      now.isAfter(metadata.startTime.plus(metadata.duration)) -> return userHash % 100 < metadata.endPercentage
+      else -> {
+        val elapsedTime = Duration.between(metadata.startTime, now)
+        val percentage = metadata.startPercentage + (metadata.endPercentage - metadata.startPercentage) *
+          elapsedTime.toMillis().toDouble() / metadata.duration.toMillis()
+        return userHash % 100 < percentage
+      }
+    }
+  }
+
+  /**
+   * Checks if the feature flag is enabled for A/B testing.
+   */
+  private fun isABTestingEnabled(metadata: MetadataContent.ABTestingConfig, context: Map<String, Any>): Boolean {
+    val userId = context["userId"] as? String ?: return false
+    val userHash = userId.murmur128x64().first.absoluteValue
+    return userHash % 100 < metadata.distribution
+  }
+
+  /**
+   * Checks if the feature flag is enabled for the given app version.
+   */
+  private fun isVersionTargeted(metadata: MetadataContent.VersionTargeting, context: Map<String, Any>): Boolean {
+    val version = context["appVersion"] as? String ?: return false
+    val currentVersion = ComparableVersion(version)
+    val minVersion = ComparableVersion(metadata.minVersion)
+    val maxVersion = ComparableVersion(metadata.maxVersion)
+    return currentVersion in minVersion..maxVersion
+  }
+
+  /**
+   * Checks if the feature flag is enabled for the given geographic location.
+   */
+  private fun isGeographicallyTargeted(metadata: MetadataContent.GeographicTargeting, context: Map<String, Any>): Boolean {
+    val country = context["country"] as? String
+    val region = context["region"] as? String
+    val checkBoth = context["checkBoth"] as? Boolean ?: false
+
+    return if (checkBoth) {
+      (country != null && country in metadata.countries) && (region != null && region in metadata.regions)
+    } else {
+      (country != null && country in metadata.countries) || (region != null && region in metadata.regions)
+    }
+  }
+
+  /**
+   * Checks if the feature flag is enabled for the given device.
+   */
+  private fun isDeviceTargeted(metadata: MetadataContent.DeviceTargeting, context: Map<String, Any>): Boolean {
+    val platform = context["platform"] as? String
+    val deviceType = context["deviceType"] as? String
+    val checkBoth = context["checkBoth"] as? Boolean ?: false
+
+    return if (checkBoth) {
+      (platform != null && platform in metadata.platforms) && (deviceType != null && deviceType in metadata.deviceTypes)
+    } else {
+      (platform != null && platform in metadata.platforms) || (deviceType != null && deviceType in metadata.deviceTypes)
+    }
+  }
+
+  /**
+   * Checks if the feature flag is enabled based on custom rules.
+   */
+  private fun areCustomRulesSatisfied(metadata: MetadataContent.CustomRules, context: Map<String, Any>): Boolean {
+    return metadata.rules.all { (key, value) ->
+      context[key]?.toString()?.equals(value, ignoreCase = true) == true
+    }
+  }
+
+  /**
+   * Calculates MurmurHash for a string.
+   */
+  private fun String.murmur128x64(): Pair<Long, Long> {
+    val hash = MurmurHash3().hash128x64(this.encodeToByteArray())
+    return Pair(hash[0].toLong(), hash[1].toLong())
   }
 }

@@ -2,13 +2,19 @@ package com.c0x12c.featureflag.repository
 
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.entity.FeatureFlagEntity
+import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.table.FeatureFlagTable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.util.UUID
 
 class FeatureFlagRepository(private val database: Database) {
+
+  private val json = Json { ignoreUnknownKeys = true }
 
   fun insert(featureFlag: FeatureFlag): UUID {
     return transaction(database) {
@@ -17,7 +23,8 @@ class FeatureFlagRepository(private val database: Database) {
         code = featureFlag.code
         description = featureFlag.description
         enabled = featureFlag.enabled
-        metadata = featureFlag.metadata
+        metadata = featureFlag.metadata?.let { json.encodeToString(it) }
+        metadataType = featureFlag.metadata?.let { it::class.simpleName }
         createdAt = Instant.now()
       }.id.value
     }
@@ -25,25 +32,31 @@ class FeatureFlagRepository(private val database: Database) {
 
   fun getById(id: UUID): FeatureFlag? {
     return transaction(database) {
-      FeatureFlagEntity.findById(id)?.toFeatureFlag()
+      FeatureFlagEntity.findById(id)?.let {
+        if (it.deletedAt == null) it.toFeatureFlag() else null
+      }
     }
   }
 
-  fun list(limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
+  fun getByCode(code: String): FeatureFlag? {
     return transaction(database) {
-      FeatureFlagEntity.all().limit(limit, offset.toLong()).map { it.toFeatureFlag() }
+      FeatureFlagEntity.find {
+        (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+      }.firstOrNull()?.toFeatureFlag()
     }
   }
 
   fun update(code: String, featureFlag: FeatureFlag): FeatureFlag? {
     return transaction(database) {
-      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction null
-
-      flag.apply {
+      val entity = FeatureFlagEntity.find {
+        (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+      }.firstOrNull() ?: return@transaction null
+      entity.apply {
         name = featureFlag.name
         description = featureFlag.description
         enabled = featureFlag.enabled
-        metadata = featureFlag.metadata
+        metadata = featureFlag.metadata?.let { json.encodeToString(it) }
+        metadataType = featureFlag.metadata?.let { it::class.simpleName }
         updatedAt = Instant.now()
       }.toFeatureFlag()
     }
@@ -51,17 +64,43 @@ class FeatureFlagRepository(private val database: Database) {
 
   fun delete(code: String): Boolean {
     return transaction(database) {
-      val flag = FeatureFlagEntity.find { FeatureFlagTable.code eq code }.singleOrNull() ?: return@transaction false
-      flag.deletedAt = Instant.now()
+      val entity = FeatureFlagEntity.find {
+        (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+      }.firstOrNull() ?: return@transaction false
+      entity.deletedAt = Instant.now()
       true
     }
   }
 
-  fun getByCode(code: String): FeatureFlag? {
+  fun list(limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
     return transaction(database) {
-      FeatureFlagEntity.find { (FeatureFlagTable.code eq code) }.find {
-        it.deletedAt == null
-      }?.toFeatureFlag()
+      FeatureFlagEntity.find { FeatureFlagTable.deletedAt.isNull() }
+        .limit(limit, offset.toLong())
+        .map { it.toFeatureFlag() }
     }
+  }
+
+  fun findByMetadataType(type: String, limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
+    return transaction(database) {
+      FeatureFlagEntity.find {
+        (FeatureFlagTable.metadataType eq type) and (FeatureFlagTable.deletedAt.isNull())
+      }
+        .limit(limit, offset.toLong())
+        .map { it.toFeatureFlag() }
+    }
+  }
+
+  private fun FeatureFlagEntity.toFeatureFlag(): FeatureFlag {
+    return FeatureFlag(
+      id = id.value,
+      name = name,
+      code = code,
+      description = description,
+      enabled = enabled,
+      metadata = metadata?.let { json.decodeFromString<MetadataContent>(it) },
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      deletedAt = deletedAt
+    )
   }
 }
