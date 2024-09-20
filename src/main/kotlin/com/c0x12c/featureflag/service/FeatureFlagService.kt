@@ -134,65 +134,8 @@ class FeatureFlagService(
   }
 
   fun getMetadataValue(code: String, key: String): String? {
-    return when (val result = getFeatureFlagByCode(code)) {
-      else -> {
-        when (val metadata = result.metadata) {
-          null -> null
-          is MetadataContent.UserTargeting -> when (key) {
-            "userIds" -> metadata.userIds.joinToString(",")
-            "percentage" -> metadata.percentage.toString()
-            else -> null
-          }
-
-          is MetadataContent.GroupTargeting -> when (key) {
-            "groupIds" -> metadata.groupIds.joinToString(",")
-            "percentage" -> metadata.percentage.toString()
-            else -> null
-          }
-
-          is MetadataContent.TimeBasedActivation -> when (key) {
-            "startTime" -> metadata.startTime.toString()
-            "endTime" -> metadata.endTime.toString()
-            else -> null
-          }
-
-          is MetadataContent.GradualRollout -> when (key) {
-            "startPercentage" -> metadata.startPercentage.toString()
-            "endPercentage" -> metadata.endPercentage.toString()
-            "startTime" -> metadata.startTime.toString()
-            "duration" -> metadata.duration.toString()
-            else -> null
-          }
-
-          is MetadataContent.ABTestingConfig -> when (key) {
-            "variantA" -> metadata.variantA
-            "variantB" -> metadata.variantB
-            "distribution" -> metadata.distribution.toString()
-            else -> null
-          }
-
-          is MetadataContent.VersionTargeting -> when (key) {
-            "minVersion" -> metadata.minVersion
-            "maxVersion" -> metadata.maxVersion
-            else -> null
-          }
-
-          is MetadataContent.GeographicTargeting -> when (key) {
-            "countries" -> metadata.countries.joinToString(",")
-            "regions" -> metadata.regions.joinToString(",")
-            else -> null
-          }
-
-          is MetadataContent.DeviceTargeting -> when (key) {
-            "platforms" -> metadata.platforms.joinToString(",")
-            "deviceTypes" -> metadata.deviceTypes.joinToString(",")
-            else -> null
-          }
-
-          is MetadataContent.CustomRules -> metadata.rules[key]
-        }
-      }
-    }
+    val result = getFeatureFlagByCode(code)
+    return result.metadata?.extractMetadata(key)
   }
 
   /**
