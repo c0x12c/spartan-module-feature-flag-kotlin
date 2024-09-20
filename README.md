@@ -98,10 +98,10 @@ Please follow guidelines in [docs/RELEASE.md](./docs/RELEASE.md)
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/spartan-tonydang">
-                    <img src="https://avatars.githubusercontent.com/u/128400107?v=4" width="100;" alt="spartan-tonydang"/>
+                <a href="https://github.com/spartan-tuongdang">
+                    <img src="https://avatars.githubusercontent.com/u/128400107?v=4" width="100;" alt="spartan-tuongdang"/>
                     <br />
-                    <sub><b>Tony DangK</b></sub>
+                    <sub><b>Tuong Dang</b></sub>
                 </a>
             </td>
 		</tr>
