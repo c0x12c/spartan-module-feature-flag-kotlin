@@ -133,6 +133,11 @@ class FeatureFlagService(
     }
   }
 
+  fun getMetadataValue(code: String, key: String): String? {
+    val result = getFeatureFlagByCode(code)
+    return result.metadata?.extractMetadata(key)
+  }
+
   /**
    * Checks if the feature flag is enabled for the given group.
    */

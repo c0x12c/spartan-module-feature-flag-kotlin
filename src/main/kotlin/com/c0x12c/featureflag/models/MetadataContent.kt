@@ -8,6 +8,8 @@ import java.time.Instant
 
 @Serializable
 sealed class MetadataContent {
+  abstract fun extractMetadata(key: String): String?
+
   @Serializable
   data class UserTargeting(
     val userIds: List<String>,
@@ -15,6 +17,12 @@ sealed class MetadataContent {
   ) : MetadataContent() {
     init {
       require(percentage in 0.0..100.0) { "Percentage must be between 0 and 100" }
+    }
+
+    override fun extractMetadata(key: String): String? = when (key) {
+      "userIds" -> userIds.joinToString(",")
+      "percentage" -> percentage.toString()
+      else -> null
     }
   }
 
@@ -26,6 +34,12 @@ sealed class MetadataContent {
     init {
       require(percentage in 0.0..100.0) { "Percentage must be between 0 and 100" }
     }
+
+    override fun extractMetadata(key: String): String? = when (key) {
+      "groupIds" -> groupIds.joinToString(",")
+      "percentage" -> percentage.toString()
+      else -> null
+    }
   }
 
   @Serializable
@@ -34,7 +48,13 @@ sealed class MetadataContent {
     val startTime: Instant,
     @Serializable(with = InstantSerializer::class)
     val endTime: Instant
-  ) : MetadataContent()
+  ) : MetadataContent() {
+    override fun extractMetadata(key: String): String? = when (key) {
+      "startTime" -> startTime.toString()
+      "endTime" -> endTime.toString()
+      else -> null
+    }
+  }
 
   @Serializable
   data class GradualRollout(
@@ -49,6 +69,14 @@ sealed class MetadataContent {
       require(startPercentage in 0.0..100.0) { "Start percentage must be between 0 and 100" }
       require(endPercentage in 0.0..100.0) { "End percentage must be between 0 and 100" }
     }
+
+    override fun extractMetadata(key: String): String? = when (key) {
+      "startPercentage" -> startPercentage.toString()
+      "endPercentage" -> endPercentage.toString()
+      "startTime" -> startTime.toString()
+      "duration" -> duration.toString()
+      else -> null
+    }
   }
 
   @Serializable
@@ -60,28 +88,55 @@ sealed class MetadataContent {
     init {
       require(distribution in 0.0..100.0) { "Distribution must be between 0 and 100" }
     }
+
+    override fun extractMetadata(key: String): String? = when (key) {
+      "variantA" -> variantA
+      "variantB" -> variantB
+      "distribution" -> distribution.toString()
+      else -> null
+    }
   }
 
   @Serializable
   data class VersionTargeting(
     val minVersion: String,
     val maxVersion: String
-  ) : MetadataContent()
+  ) : MetadataContent() {
+    override fun extractMetadata(key: String): String? = when (key) {
+      "minVersion" -> minVersion
+      "maxVersion" -> maxVersion
+      else -> null
+    }
+  }
 
   @Serializable
   data class GeographicTargeting(
     val countries: List<String>,
     val regions: List<String>
-  ) : MetadataContent()
+  ) : MetadataContent() {
+    override fun extractMetadata(key: String): String? = when (key) {
+      "countries" -> countries.joinToString(",")
+      "regions" -> regions.joinToString(",")
+      else -> null
+    }
+  }
 
   @Serializable
   data class DeviceTargeting(
     val platforms: List<String>, // e.g., "iOS", "Android", "Web"
     val deviceTypes: List<String> // e.g., "Mobile", "Tablet", "Desktop"
-  ) : MetadataContent()
+  ) : MetadataContent() {
+    override fun extractMetadata(key: String): String? = when (key) {
+      "platforms" -> platforms.joinToString(",")
+      "deviceTypes" -> deviceTypes.joinToString(",")
+      else -> null
+    }
+  }
 
   @Serializable
   data class CustomRules(
     val rules: Map<String, String> // Custom key-value pairs for specific business logic
-  ) : MetadataContent()
+  ) : MetadataContent() {
+    override fun extractMetadata(key: String): String? = rules[key]
+  }
 }
