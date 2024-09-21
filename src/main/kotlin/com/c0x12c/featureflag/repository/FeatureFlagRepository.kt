@@ -24,7 +24,7 @@ class FeatureFlagRepository(private val database: Database) {
         description = featureFlag.description
         enabled = featureFlag.enabled
         metadata = featureFlag.metadata?.let { json.encodeToString(it) }
-        metadataType = featureFlag.metadata?.let { it::class.simpleName }
+        type = featureFlag.metadata?.let { it::class.simpleName }
         createdAt = Instant.now()
       }.id.value
     }
@@ -56,7 +56,7 @@ class FeatureFlagRepository(private val database: Database) {
         description = featureFlag.description
         enabled = featureFlag.enabled
         metadata = featureFlag.metadata?.let { json.encodeToString(it) }
-        metadataType = featureFlag.metadata?.let { it::class.simpleName }
+        type = featureFlag.metadata?.let { it::class.simpleName }
         updatedAt = Instant.now()
       }.toFeatureFlag()
     }
@@ -83,7 +83,7 @@ class FeatureFlagRepository(private val database: Database) {
   fun findByMetadataType(type: String, limit: Int = 100, offset: Int = 0): List<FeatureFlag> {
     return transaction(database) {
       FeatureFlagEntity.find {
-        (FeatureFlagTable.metadataType eq type) and (FeatureFlagTable.deletedAt.isNull())
+        (FeatureFlagTable.type eq type) and (FeatureFlagTable.deletedAt.isNull())
       }
         .limit(limit, offset.toLong())
         .map { it.toFeatureFlag() }
