@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Support FeatureFlagResult method
+
+## [0.0.7]
+### Added
+
 - Refactors the feature flag implementation to enhance type safety, flexibility, and correct behavior:
   * Replace Map with FeatureFlag objects for stronger typing
   * Introduce MetadataContent sealed class for structured and type-safe metadata
