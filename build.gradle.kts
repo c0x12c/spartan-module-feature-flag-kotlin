@@ -108,7 +108,7 @@ dependencies {
   testImplementation("io.mockk:mockk:1.13.12")
 
   // Coroutines for suspend functions
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 
   testImplementation("org.testcontainers:testcontainers:1.20.1")
   testImplementation("org.testcontainers:postgresql:1.20.1")
