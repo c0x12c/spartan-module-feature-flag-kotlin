@@ -90,7 +90,7 @@ dependencies {
   implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
   implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
-  implementation("org.postgresql:postgresql:42.4.1")
+  implementation("org.postgresql:postgresql:42.7.4")
   implementation("net.postgis:postgis-jdbc:2.5.1")
   implementation("com.zaxxer:HikariCP:5.0.1")
   implementation("com.goncalossilva:murmurhash:0.4.0")
