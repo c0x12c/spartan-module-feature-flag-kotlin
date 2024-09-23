@@ -85,7 +85,7 @@ dependencies {
   implementation("redis.clients:jedis:5.1.5")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
-  implementation("org.jetbrains.exposed:exposed-core:0.49.0")
+  implementation("org.jetbrains.exposed:exposed-core:0.54.0")
   implementation("org.jetbrains.exposed:exposed-jdbc:0.49.0")
   implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
   implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
