@@ -86,7 +86,7 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
   implementation("org.jetbrains.exposed:exposed-core:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-jdbc:0.49.0")
+  implementation("org.jetbrains.exposed:exposed-jdbc:0.54.0")
   implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
   implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
