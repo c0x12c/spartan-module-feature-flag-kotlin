@@ -43,7 +43,7 @@ class FeatureFlagIntegrationTest {
       code = "TEST_FLAG",
       description = "A test flag",
       enabled = true,
-      metadata = MetadataContent.UserTargeting(listOf("user1"), 50.0)
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0)
     )
 
     val createdFlag = service.createFeatureFlag(featureFlag)
@@ -67,7 +67,7 @@ class FeatureFlagIntegrationTest {
       name = "Original Flag",
       code = "UPDATE_FLAG",
       enabled = false,
-      metadata = MetadataContent.UserTargeting(listOf("user1"), 50.0)
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0)
     )
 
     service.createFeatureFlag(originalFlag)
@@ -110,7 +110,7 @@ class FeatureFlagIntegrationTest {
       name = "Flag 1",
       code = "FLAG_1",
       enabled = true,
-      metadata = MetadataContent.UserTargeting(listOf("user1"), 50.0)
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0)
     )
     val flag2 = FeatureFlag(
       name = "Flag 2",
@@ -136,7 +136,7 @@ class FeatureFlagIntegrationTest {
       name = "User Targeted Flag",
       code = "USER_FLAG",
       enabled = true,
-      metadata = MetadataContent.UserTargeting(listOf("user1", "user2"), 73.0) // 70% gradual rollout
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1", "user2"), percentage = 73.0) // 70% gradual rollout
     )
     service.createFeatureFlag(userTargetedFlag)
 
@@ -183,13 +183,13 @@ class FeatureFlagIntegrationTest {
       name = "User Flag 1",
       code = "USER_FLAG_1",
       enabled = true,
-      metadata = MetadataContent.UserTargeting(listOf("user1"), 50.0)
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0)
     )
     val userFlag2 = FeatureFlag(
       name = "User Flag 2",
       code = "USER_FLAG_2",
       enabled = true,
-      metadata = MetadataContent.UserTargeting(listOf("user2"), 60.0)
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user2"), percentage = 60.0)
     )
     val groupFlag = FeatureFlag(
       name = "Group Flag",
@@ -247,12 +247,21 @@ class FeatureFlagIntegrationTest {
 
   @Test
   fun `getMetadataValue should return correct values for UserTargeting`() {
-    val metadata = MetadataContent.UserTargeting(listOf("user1", "user2"), 50.0)
+    val metadata = MetadataContent.UserTargeting(
+      whitelistedUsers = mapOf("user1" to true, "user2" to false),
+      blacklistedUsers = mapOf("user3" to true),
+      targetedUserIds = listOf("user4", "user5"),
+      percentage = 50.0,
+      defaultValue = true
+    )
     val flag = createFeatureFlag("User Targeting", "USER_TARGETING", metadata = metadata)
     service.createFeatureFlag(flag)
 
-    Assertions.assertEquals("user1,user2", service.getMetadataValue("USER_TARGETING", "userIds"))
-    Assertions.assertEquals("50.0", service.getMetadataValue("USER_TARGETING", "percentage"))
+    assertEquals("user1:true,user2:false", service.getMetadataValue("USER_TARGETING", "whitelistedUsers"))
+    assertEquals("user3:true", service.getMetadataValue("USER_TARGETING", "blacklistedUsers"))
+    assertEquals("user4,user5", service.getMetadataValue("USER_TARGETING", "targetedUserIds"))
+    assertEquals("50.0", service.getMetadataValue("USER_TARGETING", "percentage"))
+    assertEquals("true", service.getMetadataValue("USER_TARGETING", "defaultValue"))
     assertNull(service.getMetadataValue("USER_TARGETING", "invalidKey"))
   }
 
@@ -349,6 +358,52 @@ class FeatureFlagIntegrationTest {
     Assertions.assertEquals("value1", service.getMetadataValue("CUSTOM_RULES", "rule1"))
     Assertions.assertEquals("value2", service.getMetadataValue("CUSTOM_RULES", "rule2"))
     assertNull(service.getMetadataValue("CUSTOM_RULES", "invalidKey"))
+  }
+
+  @Test
+  fun `enable and disable feature flag`() {
+    val featureFlag = FeatureFlag(
+      name = "Test Flag",
+      code = "TOGGLE_FLAG",
+      description = "A test flag for toggling",
+      enabled = false
+    )
+
+    val createdFlag = service.createFeatureFlag(featureFlag)
+    assertFalse(createdFlag.enabled)
+
+    val enabledFlag = service.enableFeatureFlag("TOGGLE_FLAG")
+    assertTrue(enabledFlag.enabled)
+
+    val disabledFlag = service.disableFeatureFlag("TOGGLE_FLAG")
+    assertFalse(disabledFlag.enabled)
+
+    assertThrows<FeatureFlagNotFoundError> {
+      service.enableFeatureFlag("NONEXISTENT_FLAG")
+    }
+
+    assertThrows<FeatureFlagNotFoundError> {
+      service.disableFeatureFlag("NONEXISTENT_FLAG")
+    }
+  }
+
+  @Test
+  fun `isFeatureFlagEnabled should respect enabled status`() {
+    val featureFlag = FeatureFlag(
+      name = "Always Off Flag",
+      code = "ALWAYS_OFF",
+      description = "A flag that's always off",
+      enabled = false,
+      metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 100.0)
+    )
+
+    service.createFeatureFlag(featureFlag)
+
+    assertFalse(service.isFeatureFlagEnabled("ALWAYS_OFF", mapOf("userId" to "user1")))
+
+    service.enableFeatureFlag("ALWAYS_OFF")
+
+    assertTrue(service.isFeatureFlagEnabled("ALWAYS_OFF", mapOf("userId" to "user1")))
   }
 
   private fun createFeatureFlag(

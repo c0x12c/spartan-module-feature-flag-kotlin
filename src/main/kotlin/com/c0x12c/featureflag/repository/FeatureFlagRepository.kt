@@ -46,6 +46,19 @@ class FeatureFlagRepository(private val database: Database) {
     }
   }
 
+  fun updateEnableStatus(code: String, enabled: Boolean): FeatureFlag? {
+    return transaction(database) {
+      val entity = FeatureFlagEntity.find {
+        (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+      }.firstOrNull() ?: return@transaction null
+
+      entity.apply {
+        this.enabled = enabled
+        updatedAt = Instant.now()
+      }.toFeatureFlag()
+    }
+  }
+
   fun update(code: String, featureFlag: FeatureFlag): FeatureFlag? {
     return transaction(database) {
       val entity = FeatureFlagEntity.find {
@@ -62,13 +75,14 @@ class FeatureFlagRepository(private val database: Database) {
     }
   }
 
-  fun delete(code: String): Boolean {
+  fun delete(code: String): FeatureFlag? {
     return transaction(database) {
       val entity = FeatureFlagEntity.find {
         (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
-      }.firstOrNull() ?: return@transaction false
+      }.firstOrNull() ?: return@transaction null
+
       entity.deletedAt = Instant.now()
-      true
+      entity.toFeatureFlag()
     }
   }
 

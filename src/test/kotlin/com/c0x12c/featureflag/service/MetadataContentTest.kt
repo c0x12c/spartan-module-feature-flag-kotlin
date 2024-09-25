@@ -13,12 +13,12 @@ class MetadataContentTest {
 
   @Test
   fun `UserTargeting should validate percentage range`() {
-    MetadataContent.UserTargeting(listOf("user1"), 50.0) // Should not throw
+    MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0) // Should not throw
     assertThrows<IllegalArgumentException> {
-      MetadataContent.UserTargeting(listOf("user1"), -1.0)
+      MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = -1.0)
     }
     assertThrows<IllegalArgumentException> {
-      MetadataContent.UserTargeting(listOf("user1"), 101.0)
+      MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 101.0)
     }
   }
 

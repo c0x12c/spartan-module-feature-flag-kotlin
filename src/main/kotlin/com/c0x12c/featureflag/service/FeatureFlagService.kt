@@ -4,7 +4,10 @@ import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagError
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import com.c0x12c.featureflag.exception.NotifierError
 import com.c0x12c.featureflag.models.MetadataContent
+import com.c0x12c.featureflag.notification.ChangeStatus
+import com.c0x12c.featureflag.notification.SlackNotifier
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
 import com.goncalossilva.murmurhash.MurmurHash3
 import org.apache.maven.artifact.versioning.ComparableVersion
@@ -22,6 +25,7 @@ import kotlin.math.absoluteValue
 class FeatureFlagService(
   private val repository: FeatureFlagRepository,
   private val cache: RedisCache? = null,
+  private val slackNotifier: SlackNotifier? = null,
   private val cacheTTLSeconds: Long = 3600
 ) {
 
@@ -36,6 +40,7 @@ class FeatureFlagService(
     val createdFlagId = repository.insert(featureFlag)
     val newFlag = repository.getById(createdFlagId) ?: throw FeatureFlagError("Failed to retrieve created flag")
     cache?.set(newFlag.code, newFlag, cacheTTLSeconds)
+    slackNotifier?.send(newFlag, ChangeStatus.CREATED)
     return newFlag
   }
 
@@ -55,6 +60,36 @@ class FeatureFlagService(
   }
 
   /**
+   * Enables a feature flag.
+   *
+   * @param code The code of the feature flag to enable.
+   * @return The updated feature flag.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   */
+  fun enableFeatureFlag(code: String): FeatureFlag {
+    val updatedFlag = repository.updateEnableStatus(code, true)
+      ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
+    cache?.set(code, updatedFlag, cacheTTLSeconds)
+    sendNotification(updatedFlag, ChangeStatus.ENABLED)
+    return updatedFlag
+  }
+
+  /**
+   * Disables a feature flag.
+   *
+   * @param code The code of the feature flag to disable.
+   * @return The updated feature flag.
+   * @throws FeatureFlagNotFoundError If the feature flag is not found.
+   */
+  fun disableFeatureFlag(code: String): FeatureFlag {
+    val updatedFlag = repository.updateEnableStatus(code, false)
+      ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
+    cache?.set(code, updatedFlag, cacheTTLSeconds)
+    sendNotification(updatedFlag, ChangeStatus.DISABLED)
+    return updatedFlag
+  }
+
+  /**
    * Updates an existing feature flag.
    *
    * @param code The code of the feature flag to update.
@@ -65,6 +100,7 @@ class FeatureFlagService(
   fun updateFeatureFlag(code: String, featureFlag: FeatureFlag): FeatureFlag {
     val updatedFlag = repository.update(code, featureFlag) ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
     cache?.set(code, updatedFlag, cacheTTLSeconds)
+    sendNotification(updatedFlag, ChangeStatus.UPDATED)
     return updatedFlag
   }
 
@@ -75,10 +111,9 @@ class FeatureFlagService(
    * @throws FeatureFlagNotFoundError If the feature flag is not found.
    */
   fun deleteFeatureFlag(code: String) {
-    if (!repository.delete(code)) {
-      throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
-    }
+    val result = repository.delete(code) ?: throw FeatureFlagNotFoundError("Feature flag with code '$code' not found")
     cache?.delete(code)
+    sendNotification(result, ChangeStatus.DELETED)
   }
 
   /**
@@ -138,6 +173,14 @@ class FeatureFlagService(
     return result.metadata?.extractMetadata(key)
   }
 
+  private fun sendNotification(featureFlag: FeatureFlag, changeStatus: ChangeStatus) {
+    try {
+      slackNotifier?.send(featureFlag, changeStatus)
+    } catch (e: Exception) {
+      throw NotifierError("Failed to send notification for feature flag ${featureFlag.code}", e)
+    }
+  }
+
   /**
    * Checks if the feature flag is enabled for the given group.
    */
@@ -151,7 +194,19 @@ class FeatureFlagService(
    */
   private fun isUserTargeted(metadata: MetadataContent.UserTargeting, context: Map<String, Any>): Boolean {
     val userId = context["userId"] as? String ?: return false
-    return userId in metadata.userIds && isTargetedBasedOnPercentage(userId, metadata.percentage)
+
+    // Check blacklist first
+    metadata.blacklistedUsers[userId]?.let { return it }
+
+    // Then check whitelist
+    metadata.whitelistedUsers[userId]?.let { return it }
+
+    // Finally check targeted users or percentage
+    return if (userId in metadata.targetedUserIds && isTargetedBasedOnPercentage(userId, metadata.percentage)) {
+      true
+    } else {
+      metadata.defaultValue
+    }
   }
 
   /**

@@ -15,3 +15,11 @@ open class FeatureFlagError(message: String, cause: Throwable? = null) : Excepti
  * @param cause The cause of the error (optional).
  */
 class FeatureFlagNotFoundError(message: String, cause: Throwable? = null) : FeatureFlagError(message, cause)
+
+/**
+ * Exception thrown when there is an error in the notification process.
+ *
+ * @param message The error message.
+ * @param cause The cause of the error (optional).
+ */
+class NotifierError(message: String, cause: Throwable? = null) : FeatureFlagError(message, cause)

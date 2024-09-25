@@ -12,16 +12,22 @@ sealed class MetadataContent {
 
   @Serializable
   data class UserTargeting(
-    val userIds: List<String>,
-    val percentage: Double
+    val whitelistedUsers: Map<String, Boolean> = emptyMap(),
+    val blacklistedUsers: Map<String, Boolean> = emptyMap(),
+    val targetedUserIds: List<String> = emptyList(),
+    val percentage: Double,
+    val defaultValue: Boolean = false
   ) : MetadataContent() {
     init {
       require(percentage in 0.0..100.0) { "Percentage must be between 0 and 100" }
     }
 
     override fun extractMetadata(key: String): String? = when (key) {
-      "userIds" -> userIds.joinToString(",")
+      "whitelistedUsers" -> whitelistedUsers.entries.joinToString(",") { "${it.key}:${it.value}" }
+      "blacklistedUsers" -> blacklistedUsers.entries.joinToString(",") { "${it.key}:${it.value}" }
+      "targetedUserIds" -> targetedUserIds.joinToString(",")
       "percentage" -> percentage.toString()
+      "defaultValue" -> defaultValue.toString()
       else -> null
     }
   }
