@@ -1,23 +1,14 @@
+import com.c0x12c.featureflag.utils.VersionUtil
+
 plugins {
-  kotlin("jvm") version "1.9.23"
-  kotlin("plugin.serialization") version "1.9.23"
-  id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
-  id("jacoco")
+  kotlin("jvm") version "1.9.24"
+
   id("maven-publish")
   id("signing")
-  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-  id("com.github.johnrengelman.shadow") version "7.1.2"
+  id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+  id("org.jlleitschuh.gradle.ktlint") version "12.1.1" apply false
+  id("org.jetbrains.kotlinx.kover") version "0.8.3"
 }
-
-var RELEASE_VERSION = "0.1.0"
-
-if (System.getenv("RELEASE_VERSION") != null) {
-  RELEASE_VERSION = System.getenv("RELEASE_VERSION")
-  println("Release version: $RELEASE_VERSION")
-}
-
-group = "com.c0x12c.featureflag"
-version = RELEASE_VERSION
 
 repositories {
   mavenCentral()
@@ -28,6 +19,7 @@ nexusPublishing {
     sonatype {
       nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
       snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+
       username.set(System.getenv("SONATYPE_USERNAME"))
       password.set(System.getenv("SONATYPE_PASSWORD"))
     }
@@ -40,135 +32,70 @@ kotlin {
   }
 }
 
-jacoco {
-  toolVersion = "0.8.12"
-}
-
-ktlint {
-  android.set(false)
-  outputToConsole.set(true)
-  ignoreFailures.set(false)
-  reporters {
-    reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
-  }
-  filter {
-    exclude("**/generated/**")
-    include("**/src/main/kotlin/**")
-    include("**/src/test/kotlin/**")
-  }
-}
-
-sourceSets {
-  main {
-    kotlin.srcDirs("src/main/kotlin")
-  }
-  test {
-    kotlin.srcDirs("src/test/kotlin")
-  }
-}
-
-tasks.named("compileJava").configure {
-  enabled = false
-}
-tasks.named("compileTestJava").configure {
-  enabled = false
-}
-
 dependencies {
-  implementation(kotlin("stdlib"))
-  implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-  implementation("com.squareup.retrofit2:retrofit:2.11.0")
-  implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+  api(project(":core"))
 
-  implementation("javax.inject:javax.inject:1")
-  implementation("redis.clients:jedis:5.1.5")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-
-  implementation("org.jetbrains.exposed:exposed-core:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-jdbc:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
-  implementation("org.postgresql:postgresql:42.4.1")
-  implementation("net.postgis:postgis-jdbc:2.5.1")
-  implementation("com.zaxxer:HikariCP:5.0.1")
-  implementation("com.goncalossilva:murmurhash:0.4.0")
-  implementation("org.apache.maven:maven-artifact:3.9.9")
-
-  testImplementation(kotlin("test"))
-
-  testImplementation("org.postgresql:postgresql:42.7.4")
-
-  // JUnit
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
-
-  // MockK for mocking objects
-  testImplementation("io.mockk:mockk:1.13.12")
-
-  // Coroutines for suspend functions
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
-
-  testImplementation("org.testcontainers:testcontainers:1.20.1")
-  testImplementation("org.testcontainers:postgresql:1.20.1")
-  testImplementation("org.testcontainers:junit-jupiter:1.20.1")
+  kover(project(":core"))
 }
 
 tasks.test {
-  useJUnitPlatform()
-  finalizedBy(tasks.jacocoTestReport)
-  reports {
-    junitXml.required.set(true)
-  }
-}
-
-tasks.jacocoTestReport {
-  dependsOn(tasks.test)
-  reports {
-    xml.required.set(true)
-    html.required.set(true)
-  }
-}
-
-java {
-  withJavadocJar()
-  withSourcesJar()
-}
-
-publishing {
-  publications {
-    create<MavenPublication>("mavenJava") {
-      from(components["java"])
-      artifactId = "module-feature-flag"
-
-      pom {
-        name.set("Feature Flag Module")
-        description.set("A module for managing feature flags")
-        url.set("https://github.com/c0x12c/feature-flag-module")
-        licenses {
-          license {
-            name.set("Apache License, Version 2.0")
-            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-          }
-        }
-        developers {
-          developer {
-            id.set("spartan-dev")
-            name.set("Spartan Dev")
-            email.set("chan@c0x12c.com")
-          }
-        }
-        scm {
-          connection.set("scm:git:git://github.com/c0x12c/spartan-module-feature-flag-kotlin.git")
-          developerConnection.set("scm:git:ssh://github.com:c0x12c/spartan-module-feature-flag-kotlin.git")
-          url.set("https://github.com/c0x12c/spartan-module-feature-flag-kotlin")
-        }
+  subprojects {
+    if (name != "core") {
+      tasks.withType<Test>().forEach {
+        it.mustRunAfter(tasks.test)
       }
     }
   }
 }
 
-signing {
-  sign(publishing.publications["mavenJava"])
+dependencies {
+  kover(project(":core"))
+}
+
+allprojects {
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+group = "com.c0x12c"
+version = VersionUtil.getVersionFromManifest(File(rootProject.projectDir, "manifest.json"))
+
+subprojects {
+  this.version = rootProject.version
+  this.group = rootProject.group
+
+  // Apply the Ktlint plugin to subprojects
+  apply(plugin = "org.jetbrains.kotlinx.kover")
+  apply(plugin = "org.jlleitschuh.gradle.ktlint")
+
+  // Configure Ktlint within subprojects
+  configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    debug.set(false) // Set to true to see more detailed output
+    verbose.set(true) // Display more information about linting
+    android.set(false) // Set to true if you're using Android projects
+    outputToConsole.set(true) // Display lint results in the console
+    ignoreFailures.set(false) // Set to true to allow builds to pass even if there are lint errors
+    enableExperimentalRules.set(false) // Enables experimental Ktlint rules
+
+    filter {
+      exclude("**/generated/**")
+      include("**/src/main/kotlin/**")
+      include("**/src/test/kotlin/**")
+    }
+
+    reporters {
+      reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN_GROUP_BY_FILE)
+    }
+  }
+
+  tasks.withType<JavaCompile> {
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+  }
+
+  tasks.withType<Test> {
+    useJUnitPlatform()
+  }
 }

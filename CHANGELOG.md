@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Add Slack Notifier
+- Support Whitelisting and Blacklisting for UserTargeting in Metadata
+
+## [0.0.9]
+### Added
 - Support FeatureFlagResult method
 
 ## [0.0.7]

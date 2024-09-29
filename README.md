@@ -1,4 +1,4 @@
-# spartan-module-feature-flag-kotlin
+# Module Feature Flag
 
 This module provides a flexible and standardized way to manage feature flags in Kotlin applications. It supports PostgreSQL for persistent storage and optional Redis caching for improved performance.
 
@@ -83,28 +83,3 @@ To run the tests, use your build tool's test command. For example, with Gradle:
 
 ## Release
 Please follow guidelines in [docs/RELEASE.md](./docs/RELEASE.md)
-
-## Contributors
-
-<!-- readme: collaborators,contributors -start -->
-<table>
-	<tbody>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/spartan-tuongdang">
-                    <img src="https://avatars.githubusercontent.com/u/128400107?v=4" width="100;" alt="spartan-tuongdang"/>
-                    <br />
-                    <sub><b>Tuong Dang</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/spartan-ductduong">
-                    <img src="https://avatars.githubusercontent.com/u/112845152?v=4" width="100;" alt="spartan-ductduong"/>
-                    <br />
-                    <sub><b>Duc Duong</b></sub>
-                </a>
-            </td>
-		</tr>
-	<tbody>
-</table>
-<!-- readme: collaborators,contributors -end -->
