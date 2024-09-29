@@ -2,15 +2,13 @@ import com.c0x12c.featureflag.dependency.Libraries
 
 plugins {
   kotlin("jvm")
-//  kotlin("plugin.serialization") version "1.9.23"
-//  id("org.jlleitschuh.gradle.ktlint") version "10.3.0"
-//  id("maven-publish")
-//  id("signing")
-//  id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
-//  id("com.github.johnrengelman.shadow") version "7.1.2"
-}
+  kotlin("plugin.serialization") version "1.9.24"
 
-group = "com.c0x12c.featureflag"
+  id("org.jetbrains.kotlinx.kover")
+
+  `maven-publish`
+  signing
+}
 
 repositories {
   mavenCentral()
@@ -18,43 +16,89 @@ repositories {
 
 dependencies {
   implementation(kotlin("stdlib"))
-  implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-  implementation("com.squareup.retrofit2:retrofit:2.11.0")
-  implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+  implementation(Libraries.Kotlinx.KOTLINX_COROUTINES_CORE)
+  implementation(Libraries.Kotlinx.KOTLINX_DATETIME)
+  implementation(Libraries.Kotlinx.KOTLINX_SERIALIZATION_JSON)
+  implementation(Libraries.Retrofit2.RETROFIT)
+  implementation(Libraries.Retrofit2.CONVERTER_GSON)
 
-  implementation("javax.inject:javax.inject:1")
-  implementation("redis.clients:jedis:5.1.5")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+  implementation(Libraries.JavaxInject.INJECT)
+  implementation(Libraries.Redis.JEDIS)
 
-  implementation("org.jetbrains.exposed:exposed-core:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-jdbc:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-dao:0.49.0")
-  implementation("org.jetbrains.exposed:exposed-java-time:0.49.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
-//  implementation("org.postgresql:postgresql:42.4.1")
-//  implementation("net.postgis:postgis-jdbc:2.5.1")
-  implementation("com.zaxxer:HikariCP:5.0.1")
-  implementation("com.goncalossilva:murmurhash:0.4.0")
-  implementation("org.apache.maven:maven-artifact:3.9.9")
+  implementation(Libraries.Exposed.CORE)
+  implementation(Libraries.Exposed.DAO)
+  implementation(Libraries.Exposed.JAVA_TIME)
+  implementation(Libraries.Exposed.JDBC)
 
+  implementation(Libraries.Jackson.KOTLIN)
+  implementation(Libraries.Zaxxer.HIKARI)
+  implementation(Libraries.Goncalossilva.MURMURHASH)
+  implementation(Libraries.Maven.ARTIFACT)
+
+  // Logging
+  implementation(Libraries.Logging.LOGBACK_CLASSIC)
   implementation(Libraries.Logging.SLF4J)
 
+  // Test
   testImplementation(kotlin("test"))
 
-  testImplementation("org.postgresql:postgresql:42.7.4")
+  // PostgreSQL
+  testImplementation(Libraries.PostgreSQL.POSTGRESQL)
 
   // JUnit
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.0")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.0")
+  testImplementation(Libraries.Junit5.API)
+  testImplementation(Libraries.Junit5.ENGINE)
 
   // MockK for mocking objects
-  testImplementation("io.mockk:mockk:1.13.12")
+  testImplementation(Libraries.Mockk.MOCKK)
 
   // Coroutines for suspend functions
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
+  testImplementation(Libraries.Kotlinx.KOTLINX_COROUTINES_TEST)
 
-  testImplementation("org.testcontainers:testcontainers:1.20.1")
-  testImplementation("org.testcontainers:postgresql:1.20.1")
-  testImplementation("org.testcontainers:junit-jupiter:1.20.1")
+  // Test Containers
+  testImplementation(Libraries.TestContainers.JUNIT)
+  testImplementation(Libraries.TestContainers.POSTGRESQL)
+  testImplementation(Libraries.TestContainers.TEST_CONTAINERS)
+
+  implementation("com.squareup.okhttp3:mockwebserver:4.9.2")
+}
+
+publishing {
+  publications {
+    create<MavenPublication>("mavenJava") {
+      from(components["java"])
+      artifactId = "feature-flag"
+
+      pom {
+        name.set("Feature Flag Module")
+        description.set("A module for managing feature flags")
+        url.set("https://github.com/c0x12c/feature-flag-module")
+
+        licenses {
+          license {
+            name.set("Apache License, Version 2.0")
+            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+          }
+        }
+
+        developers {
+          developer {
+            id.set("spartan-dev")
+            name.set("Spartan Dev")
+            email.set("dev@c0x12c.com")
+          }
+        }
+
+        scm {
+          connection.set("scm:git:git://github.com/c0x12c/spartan-module-feature-flag-kotlin.git")
+          developerConnection.set("scm:git:ssh://github.com:c0x12c/spartan-module-feature-flag-kotlin.git")
+          url.set("https://github.com/c0x12c/spartan-module-feature-flag-kotlin")
+        }
+      }
+    }
+  }
+}
+
+signing {
+  sign(publishing.publications["mavenJava"])
 }

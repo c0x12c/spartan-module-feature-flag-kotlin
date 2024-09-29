@@ -1,8 +1,8 @@
 import java.io.ByteArrayOutputStream
 
 plugins {
-  kotlin("jvm") version "1.9.23"
-  kotlin("plugin.serialization") version "1.9.25"
+  kotlin("jvm") version "1.9.24"
+
   id("maven-publish")
   id("signing")
   id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
@@ -26,10 +26,6 @@ nexusPublishing {
   }
 }
 
-configurations {
-  testImplementation.get().extendsFrom(compileOnly.get())
-}
-
 kotlin {
   jvmToolchain {
     languageVersion.set(JavaLanguageVersion.of(17))
@@ -42,6 +38,20 @@ dependencies {
   kover(project(":core"))
 }
 
+tasks.test {
+  subprojects {
+    if (name != "core") {
+      tasks.withType<Test>().forEach {
+        it.mustRunAfter(tasks.test)
+      }
+    }
+  }
+}
+
+dependencies {
+  kover(project(":core"))
+}
+
 allprojects {
   repositories {
     mavenLocal()
@@ -49,7 +59,7 @@ allprojects {
   }
 }
 
-group = "com.c0x12c.featureflag"
+group = "com.c0x12c"
 
 fun getGitTag(): String {
   val stdout = ByteArrayOutputStream()
@@ -61,12 +71,13 @@ fun getGitTag(): String {
 }
 
 version = getGitTag()
-println("Current version: $version")
 
 subprojects {
   this.version = rootProject.version
+  this.group = rootProject.group
 
   // Apply the Ktlint plugin to subprojects
+  apply(plugin = "org.jetbrains.kotlinx.kover")
   apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
   // Configure Ktlint within subprojects
@@ -85,8 +96,7 @@ subprojects {
     }
 
     reporters {
-      reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
-      reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+      reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN_GROUP_BY_FILE)
     }
   }
 
@@ -94,41 +104,8 @@ subprojects {
     sourceCompatibility = JavaVersion.VERSION_17.toString()
     targetCompatibility = JavaVersion.VERSION_17.toString()
   }
-}
 
-publishing {
-  publications {
-    create<MavenPublication>("mavenJava") {
-      from(components["java"])
-      artifactId = "module-feature-flag"
-
-      pom {
-        name.set("Feature Flag Module")
-        description.set("A module for managing feature flags")
-        url.set("https://github.com/c0x12c/feature-flag-module")
-        licenses {
-          license {
-            name.set("Apache License, Version 2.0")
-            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-          }
-        }
-        developers {
-          developer {
-            id.set("spartan-dev")
-            name.set("Spartan Dev")
-            email.set("dev@c0x12c.com")
-          }
-        }
-        scm {
-          connection.set("scm:git:git://github.com/c0x12c/spartan-module-feature-flag-kotlin.git")
-          developerConnection.set("scm:git:ssh://github.com:c0x12c/spartan-module-feature-flag-kotlin.git")
-          url.set("https://github.com/c0x12c/spartan-module-feature-flag-kotlin")
-        }
-      }
-    }
+  tasks.withType<Test> {
+    useJUnitPlatform()
   }
-}
-
-signing {
-  sign(publishing.publications["mavenJava"])
 }

@@ -1,10 +1,12 @@
 package com.c0x12c.featureflag.service.utils
 
 class RandomUtils {
-  fun generateRandomString(length: Int): String {
-    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    return (1..length)
-      .map { chars.random() } // Pick a random character from the set
-      .joinToString("")
+  companion object {
+    val CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+    fun generateRandomString(length: Int = 8): String =
+      (1..length)
+        .map { CHARS.random() } // Pick a random character from the set
+        .joinToString("")
   }
 }

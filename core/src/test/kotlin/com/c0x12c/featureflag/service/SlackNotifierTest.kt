@@ -1,35 +1,38 @@
 package com.c0x12c.featureflag.service
 
+import com.c0x12c.featureflag.client.SlackClient
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.NotifierError
 import com.c0x12c.featureflag.notification.ChangeStatus
-import com.c0x12c.featureflag.notification.SlackApi
 import com.c0x12c.featureflag.notification.SlackNotifier
 import com.c0x12c.featureflag.notification.SlackNotifierConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import java.io.IOException
+import kotlin.test.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import retrofit2.Response
-import java.io.IOException
-import kotlin.test.assertFalse
 
 class SlackNotifierTest {
-  private lateinit var slackApi: SlackApi
+  private lateinit var slackClient: SlackClient
   private lateinit var slackNotifier: SlackNotifier
   private lateinit var config: SlackNotifierConfig
 
   @BeforeEach
   fun setup() {
-    slackApi = mockk()
+    slackClient = mockk(relaxed = true)
     config =
       SlackNotifierConfig(
         webhookUrl = "https://hooks.slack.com/services/xxx/yyy/zzz",
-        apiKey = "test-api-key",
-        clientId = "test-client-id"
+        requestHeaders =
+          mapOf(
+            "apikey" to "test-api-key",
+            "clientId" to "test-client-id"
+          )
       )
-    slackNotifier = SlackNotifier(config, slackApi)
+    slackNotifier = SlackNotifier(config) { slackClient }
   }
 
   @Test
@@ -38,10 +41,9 @@ class SlackNotifierTest {
     val changeStatus = ChangeStatus.ENABLED
 
     coEvery {
-      slackApi.sendMessage(any(), any(), any())
+      slackClient.sendMessage(any(), any())
     } returns Response.success(Unit)
 
-    // This should not throw an exception
     slackNotifier.send(featureFlag, changeStatus)
   }
 
@@ -51,7 +53,7 @@ class SlackNotifierTest {
     val changeStatus = ChangeStatus.ENABLED
 
     coEvery {
-      slackApi.sendMessage(any(), any(), any())
+      slackClient.sendMessage(any(), any())
     } returns Response.error(400, mockk(relaxed = true))
 
     assertThrows<NotifierError> {
@@ -65,7 +67,7 @@ class SlackNotifierTest {
     val changeStatus = ChangeStatus.ENABLED
 
     coEvery {
-      slackApi.sendMessage(any(), any(), any())
+      slackClient.sendMessage(any(), any())
     } throws IOException("Network error")
 
     assertThrows<NotifierError> {
@@ -79,11 +81,11 @@ class SlackNotifierTest {
     val changeStatus = ChangeStatus.UPDATED
 
     val configWithExclusion = config.copy(excludedStatuses = listOf(ChangeStatus.UPDATED))
-    val notifierWithExclusion = SlackNotifier(configWithExclusion, slackApi)
+    val notifierWithExclusion = SlackNotifier(configWithExclusion)
 
     var apiCalled = false
     coEvery {
-      slackApi.sendMessage(any(), any(), any())
+      slackClient.sendMessage(any(), any())
     } answers {
       apiCalled = true
       Response.success(Unit)
