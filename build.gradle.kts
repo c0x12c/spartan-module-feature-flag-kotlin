@@ -1,4 +1,4 @@
-import java.io.ByteArrayOutputStream
+import com.c0x12c.featureflag.utils.VersionUtil
 
 plugins {
   kotlin("jvm") version "1.9.24"
@@ -60,17 +60,7 @@ allprojects {
 }
 
 group = "com.c0x12c"
-
-fun getGitTag(): String {
-  val stdout = ByteArrayOutputStream()
-  exec {
-    commandLine = "git describe --tags".split(" ")
-    standardOutput = stdout
-  }
-  return stdout.toString().trim()
-}
-
-version = getGitTag()
+version = VersionUtil.getVersionFromManifest(File(rootProject.projectDir, "manifest.json"))
 
 subprojects {
   this.version = rootProject.version
