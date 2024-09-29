@@ -1,8 +1,10 @@
 pluginManagement {
   repositories {
-    mavenCentral()
     gradlePluginPortal()
+    mavenLocal()
+    mavenCentral()
   }
 }
 
-rootProject.name = "spartan-module-feature-flag-kotlin"
+rootProject.name = "module-feature-flag"
+include(":core")

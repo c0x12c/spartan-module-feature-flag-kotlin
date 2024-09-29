@@ -2,18 +2,65 @@
 
 The `MetadataContent` sealed class provides a flexible way to define various targeting and configuration options for feature flags. This guide will walk you through each subclass and provide examples of how to use them.
 
+# MetadataContent Usage Guide
+
 ## 1. UserTargeting
 
-Use this when you want to target specific users or a percentage of users.
+Use this when you want to target specific users, exclude certain users, or target a percentage of users with more granular control.
 
 ```kotlin
 val userTargeting = MetadataContent.UserTargeting(
-    userIds = listOf("user1", "user2", "user3"),
-    percentage = 25.0
+    whitelistedUsers = mapOf("user1" to true, "user2" to false),
+    blacklistedUsers = mapOf("user3" to true, "user4" to false),
+    targetedUserIds = listOf("user5", "user6", "user7"),
+    percentage = 25.0,
+    defaultValue = false
 )
 ```
 
-This configuration will enable the feature for users with IDs "user1", "user2", or "user3", and for 25% of other users. The percentage is calculated using a hash of the user ID for consistency.
+This configuration provides the following targeting options:
+
+- `whitelistedUsers`: A map of user IDs to boolean values. Users with `true` values will always have the feature enabled, regardless of other settings.
+- `blacklistedUsers`: A map of user IDs to boolean values. Users with `true` values will always have the feature disabled, regardless of other settings.
+- `targetedUserIds`: A list of user IDs that will be included in the percentage-based targeting.
+- `percentage`: The percentage of users (from the `targetedUserIds` list) who should have the feature enabled. Must be between 0.0 and 100.0.
+- `defaultValue`: The default state of the feature for users not specifically targeted or when the user doesn't meet the percentage criteria.
+
+The targeting logic works as follows:
+
+1. If a user is in `whitelistedUsers` with a `true` value, the feature is enabled.
+2. If a user is in `blacklistedUsers` with a `true` value, the feature is disabled.
+3. If a user is in `targetedUserIds`, they are subject to the percentage-based targeting.
+4. For users in `targetedUserIds`, the feature is enabled for the specified `percentage` of users (calculated using a hash of the user ID for consistency).
+5. For all other users, the `defaultValue` is used.
+
+Example usage:
+
+```kotlin
+val featureFlag = FeatureFlag(
+    name = "New Dashboard",
+    code = "new_dashboard_feature",
+    description = "Targeted rollout of the new dashboard",
+    enabled = true,
+    metadata = MetadataContent.UserTargeting(
+        whitelistedUsers = mapOf("admin1" to true, "beta_tester1" to true),
+        blacklistedUsers = mapOf("problem_user1" to true),
+        targetedUserIds = listOf("user1", "user2", "user3", "user4"),
+        percentage = 50.0,
+        defaultValue = false
+    )
+)
+
+featureFlagService.createFeatureFlag(featureFlag)
+```
+
+This creates a new feature flag for a targeted rollout of a new dashboard feature:
+- It's always enabled for "admin1" and "beta_tester1".
+- It's always disabled for "problem_user1".
+- For users "user1", "user2", "user3", and "user4", it's enabled for 50% of them.
+- For all other users, it's disabled by default.
+
+Note: The `percentage` must be between 0.0 and 100.0. An `IllegalArgumentException` will be thrown if this requirement is not met.
 
 ## 2. GroupTargeting
 
