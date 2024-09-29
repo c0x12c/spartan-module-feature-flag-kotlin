@@ -63,11 +63,24 @@ dependencies {
   implementation("com.squareup.okhttp3:mockwebserver:4.9.2")
 }
 
+val sourcesJar by tasks.registering(Jar::class) {
+  archiveClassifier.set("sources")
+  from(sourceSets.main.get().allSource)
+}
+
+val javadocJar by tasks.registering(Jar::class) {
+  archiveClassifier.set("javadoc")
+  from(tasks.javadoc)
+}
+
 publishing {
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["java"])
       artifactId = "feature-flag"
+
+      artifact(sourcesJar.get())
+      artifact(javadocJar.get())
 
       pom {
         name.set("Feature Flag Module")
