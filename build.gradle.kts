@@ -59,8 +59,9 @@ allprojects {
   }
 }
 
-group = "com.c0x12c"
+group = "com.c0x12c.featureflag"
 version = VersionUtil.getVersionFromManifest(File(rootProject.projectDir, "manifest.json"))
+print("Build version: '$version'")
 
 subprojects {
   this.version = rootProject.version

@@ -77,7 +77,7 @@ publishing {
   publications {
     create<MavenPublication>("mavenJava") {
       from(components["java"])
-      artifactId = "feature-flag"
+      artifactId = "core"
 
       artifact(sourcesJar.get())
       artifact(javadocJar.get())
