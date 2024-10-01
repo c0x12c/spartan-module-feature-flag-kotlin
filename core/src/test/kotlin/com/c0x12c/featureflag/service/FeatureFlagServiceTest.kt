@@ -3,6 +3,7 @@ package com.c0x12c.featureflag.service
 import RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import com.c0x12c.featureflag.models.FeatureFlagType
 import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.notification.ChangeStatus
 import com.c0x12c.featureflag.notification.SlackNotifier
@@ -185,15 +186,15 @@ class FeatureFlagServiceTest {
   fun `findFeatureFlagsByMetadataType should return flags with specific metadata type`() {
     val flags = listOf(FeatureFlag(id = UUID.randomUUID(), name = "Flag 1", code = "FLAG_1", metadata = MetadataContent.UserTargeting(targetedUserIds = listOf(), percentage = 50.0)), FeatureFlag(id = UUID.randomUUID(), name = "Flag 2", code = "FLAG_2", metadata = MetadataContent.GroupTargeting(listOf(), 75.0)))
 
-    every { repository.findByMetadataType("UserTargeting", 100, 0) } returns listOf(flags[0])
+    every { repository.findByMetadataType(FeatureFlagType.USER_TARGETING, 100, 0) } returns listOf(flags[0])
 
-    val result = service.findFeatureFlagsByMetadataType("UserTargeting")
+    val result = service.findFeatureFlagsByMetadataType(FeatureFlagType.USER_TARGETING)
 
     assertEquals(1, result.size)
     assertEquals("Flag 1", result[0].name)
     assertTrue(result[0].metadata is MetadataContent.UserTargeting)
 
-    verify { repository.findByMetadataType("UserTargeting", 100, 0) }
+    verify { repository.findByMetadataType(FeatureFlagType.USER_TARGETING, 100, 0) }
   }
 
   @Test

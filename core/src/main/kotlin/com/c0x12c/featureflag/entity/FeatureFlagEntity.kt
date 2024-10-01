@@ -15,8 +15,8 @@ class FeatureFlagEntity(
   var code by FeatureFlagTable.code
   var description by FeatureFlagTable.description
   var enabled by FeatureFlagTable.enabled
-  var metadata by FeatureFlagTable.metadata
   var type by FeatureFlagTable.type
+  var metadata by FeatureFlagTable.metadata
   var createdAt by FeatureFlagTable.createdAt
   var updatedAt by FeatureFlagTable.updatedAt
   var deletedAt by FeatureFlagTable.deletedAt

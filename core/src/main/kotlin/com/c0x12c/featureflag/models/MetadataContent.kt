@@ -4,11 +4,16 @@ import com.c0x12c.featureflag.serializer.CustomDurationSerializer
 import com.c0x12c.featureflag.serializer.InstantSerializer
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.absoluteValue
 import kotlinx.serialization.Serializable
+import org.apache.maven.artifact.versioning.ComparableVersion
+import utils.PercentageMatchingUtil
 
 @Serializable
 sealed class MetadataContent {
   abstract fun extractMetadata(key: String): String?
+
+  abstract fun isEnabled(context: Map<String, Any>): Boolean
 
   @Serializable
   data class UserTargeting(
@@ -31,6 +36,25 @@ sealed class MetadataContent {
         "defaultValue" -> defaultValue.toString()
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val userId = context["userId"] as? String ?: return false
+
+      // Check blacklist first
+      blacklistedUsers[userId]?.let { return it }
+
+      // Then check whitelist
+      whitelistedUsers[userId]?.let { return it }
+
+      // Finally check targeted users or percentage
+      return if (userId in targetedUserIds &&
+        PercentageMatchingUtil.isTargetedBasedOnPercentage(value = userId, percentage = percentage)
+      ) {
+        true
+      } else {
+        defaultValue
+      }
+    }
   }
 
   @Serializable
@@ -48,6 +72,12 @@ sealed class MetadataContent {
         "percentage" -> percentage.toString()
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val groupId = context["groupId"] as? String ?: return false
+      return groupId in groupIds &&
+        PercentageMatchingUtil.isTargetedBasedOnPercentage(groupId, percentage)
+    }
   }
 
   @Serializable
@@ -63,6 +93,12 @@ sealed class MetadataContent {
         "endTime" -> endTime.toString()
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val now = Instant.now()
+      return now.isAfter(startTime) &&
+        now.isBefore(endTime)
+    }
   }
 
   @Serializable
@@ -87,6 +123,22 @@ sealed class MetadataContent {
         "duration" -> duration.toString()
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val userId = context["userId"] as? String ?: return false
+      val userHash = PercentageMatchingUtil.murmur128x64(value = userId).first.absoluteValue
+      val now = Instant.now()
+
+      when {
+        now.isBefore(startTime) -> return userHash % 100 < startPercentage
+        now.isAfter(startTime.plus(duration)) -> return userHash % 100 < endPercentage
+        else -> {
+          val elapsedTime = Duration.between(startTime, now)
+          val percentage = startPercentage + (endPercentage - startPercentage) * elapsedTime.toMillis().toDouble() / duration.toMillis()
+          return userHash % 100 < percentage
+        }
+      }
+    }
   }
 
   @Serializable
@@ -107,6 +159,12 @@ sealed class MetadataContent {
         "distribution" -> distribution.toString()
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val userId = context["userId"] as? String ?: return false
+      val userHash = PercentageMatchingUtil.murmur128x64(value = userId).first.absoluteValue
+      return userHash % 100 < distribution
+    }
   }
 
   @Serializable
@@ -120,6 +178,14 @@ sealed class MetadataContent {
         "maxVersion" -> maxVersion
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val version = context["appVersion"] as? String ?: return false
+      val currentVersion = ComparableVersion(version)
+      val minVersion = ComparableVersion(minVersion)
+      val maxVersion = ComparableVersion(maxVersion)
+      return currentVersion in minVersion..maxVersion
+    }
   }
 
   @Serializable
@@ -133,6 +199,20 @@ sealed class MetadataContent {
         "regions" -> regions.joinToString(",")
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val country = context["country"] as? String
+      val region = context["region"] as? String
+      val checkBoth = context["checkBoth"] as? Boolean ?: false
+
+      return if (checkBoth) {
+        (country != null && country in countries) &&
+          (region != null && region in regions)
+      } else {
+        (country != null && country in countries) ||
+          (region != null && region in regions)
+      }
+    }
   }
 
   @Serializable
@@ -148,6 +228,20 @@ sealed class MetadataContent {
         "deviceTypes" -> deviceTypes.joinToString(",")
         else -> null
       }
+
+    override fun isEnabled(context: Map<String, Any>): Boolean {
+      val platform = context["platform"] as? String
+      val deviceType = context["deviceType"] as? String
+      val checkBoth = context["checkBoth"] as? Boolean ?: false
+
+      return if (checkBoth) {
+        (platform != null && platform in platforms) &&
+          (deviceType != null && deviceType in deviceTypes)
+      } else {
+        (platform != null && platform in platforms) ||
+          (deviceType != null && deviceType in deviceTypes)
+      }
+    }
   }
 
   @Serializable
@@ -156,5 +250,10 @@ sealed class MetadataContent {
     val rules: Map<String, String>
   ) : MetadataContent() {
     override fun extractMetadata(key: String): String? = rules[key]
+
+    override fun isEnabled(context: Map<String, Any>): Boolean =
+      rules.all { (key, value) ->
+        context[key]?.toString()?.equals(value, ignoreCase = true) == true
+      }
   }
 }

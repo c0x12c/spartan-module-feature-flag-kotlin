@@ -2,15 +2,16 @@ package com.c0x12c.featureflag.repository
 
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.entity.FeatureFlagEntity
+import com.c0x12c.featureflag.models.FeatureFlagType
 import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.table.FeatureFlagTable
+import java.time.Instant
+import java.util.UUID
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.time.Instant
-import java.util.UUID
 
 class FeatureFlagRepository(
   private val database: Database
@@ -26,7 +27,7 @@ class FeatureFlagRepository(
           description = featureFlag.description
           enabled = featureFlag.enabled
           metadata = featureFlag.metadata?.let { json.encodeToString(it) }
-          type = featureFlag.metadata?.let { it::class.simpleName }
+          type = featureFlag.type
           createdAt = Instant.now()
         }.id.value
     }
@@ -82,7 +83,7 @@ class FeatureFlagRepository(
           description = featureFlag.description
           enabled = featureFlag.enabled
           metadata = featureFlag.metadata?.let { json.encodeToString(it) }
-          type = featureFlag.metadata?.let { it::class.simpleName }
+          type = featureFlag.type
           updatedAt = Instant.now()
         }.toFeatureFlag()
     }
@@ -113,7 +114,7 @@ class FeatureFlagRepository(
     }
 
   fun findByMetadataType(
-    type: String,
+    type: FeatureFlagType,
     limit: Int = 100,
     offset: Int = 0
   ): List<FeatureFlag> =
@@ -132,6 +133,7 @@ class FeatureFlagRepository(
       code = code,
       description = description,
       enabled = enabled,
+      type = type,
       metadata = metadata?.let { json.decodeFromString<MetadataContent>(it) },
       createdAt = createdAt,
       updatedAt = updatedAt,

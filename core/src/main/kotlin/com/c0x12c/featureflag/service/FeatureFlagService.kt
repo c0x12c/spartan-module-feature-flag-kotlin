@@ -5,15 +5,10 @@ import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagError
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
 import com.c0x12c.featureflag.exception.NotifierError
-import com.c0x12c.featureflag.models.MetadataContent
+import com.c0x12c.featureflag.models.FeatureFlagType
 import com.c0x12c.featureflag.notification.ChangeStatus
 import com.c0x12c.featureflag.notification.SlackNotifier
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
-import com.goncalossilva.murmurhash.MurmurHash3
-import java.time.Duration
-import java.time.Instant
-import kotlin.math.absoluteValue
-import org.apache.maven.artifact.versioning.ComparableVersion
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -192,7 +187,7 @@ class FeatureFlagService(
    * @return List of feature flags matching the metadata type.
    */
   fun findFeatureFlagsByMetadataType(
-    type: String,
+    type: FeatureFlagType,
     limit: Int = DEFAULT_LIMIT,
     offset: Int = DEFAULT_OFFSET
   ): List<FeatureFlag> = repository.findByMetadataType(type, limit, offset)
@@ -213,20 +208,7 @@ class FeatureFlagService(
     // If the flag is not enabled, return false immediately
     if (!flag.enabled) return false
 
-    // If there's no metadata, return true since the flag is enabled
-    val metadata = flag.metadata ?: return true
-
-    return when (metadata) {
-      is MetadataContent.UserTargeting -> isUserTargeted(metadata, context)
-      is MetadataContent.GroupTargeting -> isGroupTargeted(metadata, context)
-      is MetadataContent.TimeBasedActivation -> isTimeBasedActivated(metadata)
-      is MetadataContent.GradualRollout -> isGraduallyRolledOut(metadata, context)
-      is MetadataContent.ABTestingConfig -> isABTestingEnabled(metadata, context)
-      is MetadataContent.VersionTargeting -> isVersionTargeted(metadata, context)
-      is MetadataContent.GeographicTargeting -> isGeographicallyTargeted(metadata, context)
-      is MetadataContent.DeviceTargeting -> isDeviceTargeted(metadata, context)
-      is MetadataContent.CustomRules -> areCustomRulesSatisfied(metadata, context)
-    }
+    return flag.metadata?.isEnabled(context) ?: true
   }
 
   fun getMetadataValue(
@@ -246,162 +228,5 @@ class FeatureFlagService(
     } catch (e: Exception) {
       throw NotifierError("Failed to send notification for feature flag ${featureFlag.code}", e)
     }
-  }
-
-  /**
-   * Checks if the feature flag is enabled for the given group.
-   */
-  private fun isGroupTargeted(
-    metadata: MetadataContent.GroupTargeting,
-    context: Map<String, Any>
-  ): Boolean {
-    val groupId = context["groupId"] as? String ?: return false
-    return groupId in metadata.groupIds && isTargetedBasedOnPercentage(groupId, metadata.percentage)
-  }
-
-  /**
-   * Checks if the feature flag is enabled for the given user.
-   */
-  private fun isUserTargeted(
-    metadata: MetadataContent.UserTargeting,
-    context: Map<String, Any>
-  ): Boolean {
-    val userId = context["userId"] as? String ?: return false
-
-    // Check blacklist first
-    metadata.blacklistedUsers[userId]?.let { return it }
-
-    // Then check whitelist
-    metadata.whitelistedUsers[userId]?.let { return it }
-
-    // Finally check targeted users or percentage
-    return if (userId in metadata.targetedUserIds && isTargetedBasedOnPercentage(userId, metadata.percentage)) {
-      true
-    } else {
-      metadata.defaultValue
-    }
-  }
-
-  /**
-   * Calculates if the feature flag should be activated based on the percentage and a hash of the identifier.
-   */
-  private fun isTargetedBasedOnPercentage(
-    identifier: String,
-    percentage: Double
-  ): Boolean {
-    val hash = identifier.murmur128x64().first.absoluteValue
-    val hashPercentage = (hash % 100) + 1
-    return hashPercentage <= percentage
-  }
-
-  /**
-   * Checks if the feature flag is active based on the current time.
-   */
-  private fun isTimeBasedActivated(metadata: MetadataContent.TimeBasedActivation): Boolean {
-    val now = Instant.now()
-    return now.isAfter(metadata.startTime) && now.isBefore(metadata.endTime)
-  }
-
-  /**
-   * Checks if the feature flag is enabled based on gradual rollout configuration.
-   */
-  private fun isGraduallyRolledOut(
-    metadata: MetadataContent.GradualRollout,
-    context: Map<String, Any>
-  ): Boolean {
-    val userId = context["userId"] as? String ?: return false
-    val userHash = userId.murmur128x64().first.absoluteValue
-    val now = Instant.now()
-
-    when {
-      now.isBefore(metadata.startTime) -> return userHash % 100 < metadata.startPercentage
-      now.isAfter(metadata.startTime.plus(metadata.duration)) -> return userHash % 100 < metadata.endPercentage
-      else -> {
-        val elapsedTime = Duration.between(metadata.startTime, now)
-        val percentage = metadata.startPercentage + (metadata.endPercentage - metadata.startPercentage) * elapsedTime.toMillis().toDouble() / metadata.duration.toMillis()
-        return userHash % 100 < percentage
-      }
-    }
-  }
-
-  /**
-   * Checks if the feature flag is enabled for A/B testing.
-   */
-  private fun isABTestingEnabled(
-    metadata: MetadataContent.ABTestingConfig,
-    context: Map<String, Any>
-  ): Boolean {
-    val userId = context["userId"] as? String ?: return false
-    val userHash = userId.murmur128x64().first.absoluteValue
-    return userHash % 100 < metadata.distribution
-  }
-
-  /**
-   * Checks if the feature flag is enabled for the given app version.
-   */
-  private fun isVersionTargeted(
-    metadata: MetadataContent.VersionTargeting,
-    context: Map<String, Any>
-  ): Boolean {
-    val version = context["appVersion"] as? String ?: return false
-    val currentVersion = ComparableVersion(version)
-    val minVersion = ComparableVersion(metadata.minVersion)
-    val maxVersion = ComparableVersion(metadata.maxVersion)
-    return currentVersion in minVersion..maxVersion
-  }
-
-  /**
-   * Checks if the feature flag is enabled for the given geographic location.
-   */
-  private fun isGeographicallyTargeted(
-    metadata: MetadataContent.GeographicTargeting,
-    context: Map<String, Any>
-  ): Boolean {
-    val country = context["country"] as? String
-    val region = context["region"] as? String
-    val checkBoth = context["checkBoth"] as? Boolean ?: false
-
-    return if (checkBoth) {
-      (country != null && country in metadata.countries) && (region != null && region in metadata.regions)
-    } else {
-      (country != null && country in metadata.countries) || (region != null && region in metadata.regions)
-    }
-  }
-
-  /**
-   * Checks if the feature flag is enabled for the given device.
-   */
-  private fun isDeviceTargeted(
-    metadata: MetadataContent.DeviceTargeting,
-    context: Map<String, Any>
-  ): Boolean {
-    val platform = context["platform"] as? String
-    val deviceType = context["deviceType"] as? String
-    val checkBoth = context["checkBoth"] as? Boolean ?: false
-
-    return if (checkBoth) {
-      (platform != null && platform in metadata.platforms) && (deviceType != null && deviceType in metadata.deviceTypes)
-    } else {
-      (platform != null && platform in metadata.platforms) || (deviceType != null && deviceType in metadata.deviceTypes)
-    }
-  }
-
-  /**
-   * Checks if the feature flag is enabled based on custom rules.
-   */
-  private fun areCustomRulesSatisfied(
-    metadata: MetadataContent.CustomRules,
-    context: Map<String, Any>
-  ): Boolean =
-    metadata.rules.all { (key, value) ->
-      context[key]?.toString()?.equals(value, ignoreCase = true) == true
-    }
-
-  /**
-   * Calculates MurmurHash for a string.
-   */
-  private fun String.murmur128x64(): Pair<Long, Long> {
-    val hash = MurmurHash3().hash128x64(this.encodeToByteArray())
-    return Pair(hash[0].toLong(), hash[1].toLong())
   }
 }
