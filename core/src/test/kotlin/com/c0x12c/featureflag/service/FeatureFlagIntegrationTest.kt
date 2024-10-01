@@ -3,6 +3,7 @@ package com.c0x12c.featureflag.service
 import com.c0x12c.featureflag.client.SlackClient
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
+import com.c0x12c.featureflag.models.FeatureFlagType
 import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.notification.ChangeStatus
 import com.c0x12c.featureflag.notification.SlackNotifier
@@ -262,22 +263,20 @@ class FeatureFlagIntegrationTest {
   }
 
   @Test
-  fun `find feature flags by metadata type`() {
-    val userFlag1 = FeatureFlag(name = "User Flag 1", code = "USER_FLAG_1", enabled = true, metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1"), percentage = 50.0))
-    val userFlag2 = FeatureFlag(name = "User Flag 2", code = "USER_FLAG_2", enabled = true, metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user2"), percentage = 60.0))
-    val groupFlag = FeatureFlag(name = "Group Flag", code = "GROUP_FLAG", enabled = true, metadata = MetadataContent.GroupTargeting(listOf("group1"), 70.0))
+  fun `find feature flags by type`() {
+    val userFlag1 = FeatureFlag(name = "User Flag 1", code = "USER_FLAG_1", enabled = true, type = FeatureFlagType.USER_TARGETING)
+    val userFlag2 = FeatureFlag(name = "User Flag 2", code = "USER_FLAG_2", enabled = true, type = FeatureFlagType.USER_TARGETING)
+    val groupFlag = FeatureFlag(name = "Group Flag", code = "GROUP_FLAG", enabled = true, type = FeatureFlagType.GROUP_TARGETING)
 
     featureFlagService.createFeatureFlag(userFlag1)
     featureFlagService.createFeatureFlag(userFlag2)
     featureFlagService.createFeatureFlag(groupFlag)
 
-    val userFlags = featureFlagService.findFeatureFlagsByMetadataType("UserTargeting")
+    val userFlags = featureFlagService.findFeatureFlagsByMetadataType(FeatureFlagType.USER_TARGETING)
     assertEquals(2, userFlags.size)
-    assertTrue(userFlags.all { it.metadata is MetadataContent.UserTargeting })
 
-    val groupFlags = featureFlagService.findFeatureFlagsByMetadataType("GroupTargeting")
+    val groupFlags = featureFlagService.findFeatureFlagsByMetadataType(FeatureFlagType.GROUP_TARGETING)
     assertEquals(1, groupFlags.size)
-    assertTrue(groupFlags.all { it.metadata is MetadataContent.GroupTargeting })
   }
 
   @Test

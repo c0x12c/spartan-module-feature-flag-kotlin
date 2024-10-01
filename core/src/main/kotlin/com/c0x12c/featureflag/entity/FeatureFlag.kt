@@ -1,5 +1,6 @@
 package com.c0x12c.featureflag.entity
 
+import com.c0x12c.featureflag.models.FeatureFlagType
 import com.c0x12c.featureflag.models.MetadataContent
 import com.c0x12c.featureflag.serializer.InstantSerializer
 import com.c0x12c.featureflag.serializer.UuidSerializer
@@ -15,6 +16,7 @@ data class FeatureFlag(
   val code: String,
   val description: String? = null,
   val enabled: Boolean = false,
+  val type: FeatureFlagType = FeatureFlagType.TOGGLE,
   val metadata: MetadataContent? = null,
   @Serializable(with = InstantSerializer::class)
   val createdAt: Instant = Instant.now(),

@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.feature_flags
     description TEXT,
     enabled     BOOLEAN                  NOT NULL DEFAULT FALSE,
     metadata    TEXT,
-    type VARCHAR(255),
+    type VARCHAR(50),
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMP WITH TIME ZONE,
     deleted_at  TIMESTAMP WITH TIME ZONE
