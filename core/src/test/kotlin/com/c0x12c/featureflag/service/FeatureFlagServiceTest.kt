@@ -9,6 +9,7 @@ import com.c0x12c.featureflag.notification.ChangeStatus
 import com.c0x12c.featureflag.notification.SlackNotifier
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
 import io.mockk.Runs
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -19,6 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -41,6 +43,11 @@ class FeatureFlagServiceTest {
     every { slackNotifier.send(any(), any()) } just Runs
 
     service = FeatureFlagService(repository, cache, slackNotifier)
+  }
+
+  @AfterEach
+  fun afterEach() {
+    clearAllMocks()
   }
 
   @Test

@@ -6,10 +6,12 @@ import com.c0x12c.featureflag.exception.NotifierError
 import com.c0x12c.featureflag.notification.ChangeStatus
 import com.c0x12c.featureflag.notification.SlackNotifier
 import com.c0x12c.featureflag.notification.SlackNotifierConfig
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.io.IOException
 import kotlin.test.assertFalse
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -33,6 +35,11 @@ class SlackNotifierTest {
           )
       )
     slackNotifier = SlackNotifier(config) { slackClient }
+  }
+
+  @AfterEach
+  fun afterEach() {
+    clearAllMocks()
   }
 
   @Test
