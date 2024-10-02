@@ -1,6 +1,6 @@
 package com.c0x12c.featureflag.service
 
-import RedisCache
+import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
 import com.c0x12c.featureflag.models.FeatureFlagType
@@ -12,7 +12,6 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
@@ -33,25 +32,35 @@ class FeatureFlagServiceTest {
 
   @BeforeEach
   fun setup() {
-    repository = mockk()
-    cache = mockk()
-    slackNotifier = mockk()
+    repository = mockk<FeatureFlagRepository>()
+    cache = mockk<RedisCache>()
+    every { cache.get(any()) } returns null
+    every { cache.set(any(), any()) } just Runs
+
+    slackNotifier = mockk<SlackNotifier>()
+    every { slackNotifier.send(any(), any()) } just Runs
+
     service = FeatureFlagService(repository, cache, slackNotifier)
   }
 
   @Test
   fun `createFeatureFlag should create a new feature flag`() {
-    val featureFlag = FeatureFlag(name = "Test Flag", code = "TEST_FLAG", description = "A test flag", enabled = true, metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1", "user2"), percentage = 50.0))
+    val featureFlag =
+      FeatureFlag(
+        name = "Test Flag",
+        code = "TEST_FLAG",
+        description = "A test flag",
+        enabled = true,
+        metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1", "user2"), percentage = 50.0)
+      )
 
     val createdFlagId = UUID.randomUUID()
     val createdFlag = featureFlag.copy(id = createdFlagId, createdAt = Instant.now())
 
     every { repository.insert(any()) } returns createdFlagId
     every { repository.getById(createdFlagId) } returns createdFlag
-    every { cache.set(any(), any()) } returns true
-    every { slackNotifier.send(any(), any()) } just Runs
 
-    val result = service.createFeatureFlag(featureFlag)
+    val result = service.createFeatureFlag(featureFlag = featureFlag)
 
     assertNotNull(result)
     assertEquals("Test Flag", result.name)
@@ -88,9 +97,7 @@ class FeatureFlagServiceTest {
     val code = "TEST_FLAG"
     val repoFlag = FeatureFlag(id = UUID.randomUUID(), name = "Test Flag", code = code, enabled = true, metadata = MetadataContent.GroupTargeting(listOf("group1", "group2"), 75.0), createdAt = Instant.now())
 
-    every { cache.get(code) } returns null
     every { repository.getByCode(code) } returns repoFlag
-    every { cache.set(any(), any()) } returns true
 
     val result = service.getFeatureFlagByCode(code)
 
@@ -109,7 +116,6 @@ class FeatureFlagServiceTest {
   fun `getFeatureFlagByCode should throw FeatureFlagNotFoundError if flag not found`() {
     val code = "NONEXISTENT_FLAG"
 
-    every { cache.get(code) } returns null
     every { repository.getByCode(code) } returns null
 
     assertThrows<FeatureFlagNotFoundError> {
@@ -126,8 +132,6 @@ class FeatureFlagServiceTest {
     val updatedFlag = FeatureFlag(id = UUID.randomUUID(), name = "New Name", code = code, enabled = true, metadata = MetadataContent.TimeBasedActivation(Instant.now(), Instant.now().plusSeconds(3600)), createdAt = Instant.now(), updatedAt = Instant.now())
 
     every { repository.update(code, any()) } returns updatedFlag
-    every { cache.set(any(), any()) } returns true
-    every { slackNotifier.send(any(), any()) } just Runs
 
     val result = service.updateFeatureFlag(code, updatedFlag)
 
@@ -204,8 +208,6 @@ class FeatureFlagServiceTest {
     val enabledFlag = flag.copy(enabled = true)
 
     every { repository.updateEnableStatus(code, true) } returns enabledFlag
-    every { cache.set(any(), any()) } returns true
-    every { slackNotifier.send(any(), any()) } just Runs
 
     val result = service.enableFeatureFlag(code)
 
@@ -237,8 +239,6 @@ class FeatureFlagServiceTest {
     val disabledFlag = flag.copy(enabled = false)
 
     every { repository.updateEnableStatus(code, false) } returns disabledFlag
-    every { cache.set(any(), any()) } returns true
-    every { slackNotifier.send(any(), any()) } just Runs
 
     val result = service.disableFeatureFlag(code)
 
@@ -269,8 +269,7 @@ class FeatureFlagServiceTest {
     val deletedFlag = FeatureFlag(id = UUID.randomUUID(), name = "Test Flag", code = code, enabled = true, createdAt = Instant.now(), deletedAt = Instant.now())
 
     every { repository.delete(code) } returns deletedFlag
-    every { cache.delete(code) } returns true
-    every { slackNotifier.send(any(), any()) } just runs
+    every { cache.delete(code) } just Runs
 
     assertDoesNotThrow {
       service.deleteFeatureFlag(code)
