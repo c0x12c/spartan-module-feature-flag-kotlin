@@ -1,6 +1,6 @@
 package com.c0x12c.featureflag.service
 
-import RedisCache
+import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import com.c0x12c.featureflag.exception.FeatureFlagNotFoundError
 import com.c0x12c.featureflag.models.FeatureFlagType

@@ -1,7 +1,8 @@
 package com.c0x12c.featureflag.service.utils
 
-import RedisCache
+import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.repository.FeatureFlagRepository
+import com.c0x12c.featureflag.service.cache.JedisClusterCache
 import java.nio.file.Files
 import java.nio.file.Paths
 import org.jetbrains.exposed.sql.Database
@@ -36,7 +37,7 @@ object TestUtils {
   private fun setupRedisCache() {
     val redisNodes = REDIS_PORTS.map { createHostAndPort(it) }.toSet()
     val jedisCluster = JedisCluster(redisNodes)
-    redisCache = RedisCache(jedisCluster, "test")
+    redisCache = JedisClusterCache(jedisCluster, "test")
   }
 
   private fun createHostAndPort(port: Int) = HostAndPort(REDIS_HOST, port)

@@ -23,7 +23,6 @@ dependencies {
   implementation(Libraries.Retrofit2.CONVERTER_GSON)
 
   implementation(Libraries.JavaxInject.INJECT)
-  implementation(Libraries.Redis.JEDIS)
 
   implementation(Libraries.Exposed.CORE)
   implementation(Libraries.Exposed.DAO)
@@ -54,6 +53,9 @@ dependencies {
 
   // Coroutines for suspend functions
   testImplementation(Libraries.Kotlinx.KOTLINX_COROUTINES_TEST)
+
+  // Jedis
+  testImplementation(Libraries.Redis.JEDIS)
 
   // Test Containers
   testImplementation(Libraries.TestContainers.JUNIT)
