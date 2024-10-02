@@ -11,7 +11,7 @@ import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.JedisCluster
 
 object TestUtils {
-  lateinit var database: Database
+  private lateinit var database: Database
   lateinit var repository: FeatureFlagRepository
   lateinit var redisCache: RedisCache
 

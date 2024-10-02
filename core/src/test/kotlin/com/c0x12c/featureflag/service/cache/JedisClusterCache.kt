@@ -4,6 +4,7 @@ import com.c0x12c.featureflag.cache.RedisCache
 import com.c0x12c.featureflag.entity.FeatureFlag
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisCluster
 
 class JedisClusterCache(
@@ -20,39 +21,27 @@ class JedisClusterCache(
   override fun set(
     key: String,
     value: FeatureFlag
-  ): Boolean =
-    try {
-      val redisKey = keyFrom(key)
-      jedisCluster.setex(redisKey, ttlSeconds, serialize(value))
-      true
-    } catch (e: Exception) {
-      false
-    }
-
-  override fun get(key: String): FeatureFlag? {
-    return try {
-      val result = jedisCluster.get(keyFrom(key)) ?: return null
-      deserialize(result)
-    } catch (e: Exception) {
-      null
-    }
+  ) {
+    jedisCluster.setex(keyFrom(key), ttlSeconds, serialize(value))
   }
 
-  override fun delete(key: String): Boolean =
-    try {
-      jedisCluster.del(keyFrom(key)) > 0
-    } catch (e: Exception) {
-      false
-    }
+  override fun get(key: String): FeatureFlag? {
+    val result = jedisCluster.get(keyFrom(key)) ?: return null
+    return deserialize(result)
+  }
 
-  override fun clearAll(): Boolean =
-    try {
-      val keys = jedisCluster.keys("$keyspace:*")
-      if (keys.isNotEmpty()) {
-        jedisCluster.del(*keys.toTypedArray())
+  override fun delete(key: String) {
+    jedisCluster.del(keyFrom(key)) > 0
+  }
+
+  override fun clearAll() {
+    val nodes = jedisCluster.clusterNodes.keys
+    nodes.forEach { node ->
+      val jedisNode = Jedis(node.split(":")[0], node.split(":")[1].toInt())
+      // Ensure to only clear the master nodes
+      if (jedisNode.info("replication").contains("role:master")) {
+        jedisNode.use { it.flushDB() }
       }
-      true
-    } catch (e: Exception) {
-      false
     }
+  }
 }

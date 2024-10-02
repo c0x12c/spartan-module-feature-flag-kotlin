@@ -6,11 +6,11 @@ interface RedisCache {
   fun set(
     key: String,
     value: FeatureFlag
-  ): Boolean
+  )
 
   fun get(key: String): FeatureFlag?
 
-  fun delete(key: String): Boolean
+  fun delete(key: String)
 
-  fun clearAll(): Boolean
+  fun clearAll()
 }
