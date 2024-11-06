@@ -43,7 +43,7 @@ class FeatureFlagRepository(
     transaction(database) {
       FeatureFlagEntity
         .find {
-          (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+          (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt eq null)
         }.firstOrNull()
         ?.toFeatureFlag()
     }
@@ -56,7 +56,7 @@ class FeatureFlagRepository(
       val entity =
         FeatureFlagEntity
           .find {
-            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt eq null)
           }.firstOrNull() ?: return@transaction null
 
       entity
@@ -75,7 +75,7 @@ class FeatureFlagRepository(
       val entity =
         FeatureFlagEntity
           .find {
-            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt eq null)
           }.firstOrNull() ?: return@transaction null
       entity
         .apply {
@@ -94,7 +94,7 @@ class FeatureFlagRepository(
       val entity =
         FeatureFlagEntity
           .find {
-            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt.isNull())
+            (FeatureFlagTable.code eq code) and (FeatureFlagTable.deletedAt eq null)
           }.firstOrNull() ?: return@transaction null
 
       entity.deletedAt = Instant.now()
@@ -108,7 +108,7 @@ class FeatureFlagRepository(
   ): List<FeatureFlag> =
     transaction(database) {
       FeatureFlagEntity
-        .find { FeatureFlagTable.deletedAt.isNull() }
+        .find { FeatureFlagTable.deletedAt eq null }
         .limit(limit, offset.toLong())
         .map { it.toFeatureFlag() }
     }
@@ -121,7 +121,7 @@ class FeatureFlagRepository(
     transaction(database) {
       FeatureFlagEntity
         .find {
-          (FeatureFlagTable.type eq type) and (FeatureFlagTable.deletedAt.isNull())
+          (FeatureFlagTable.type eq type) and (FeatureFlagTable.deletedAt eq null)
         }.limit(limit, offset.toLong())
         .map { it.toFeatureFlag() }
     }
