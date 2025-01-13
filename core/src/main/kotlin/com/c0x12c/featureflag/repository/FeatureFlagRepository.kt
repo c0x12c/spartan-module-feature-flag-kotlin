@@ -13,6 +13,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -116,8 +117,9 @@ class FeatureFlagRepository(
           (FeatureFlagTable.deletedAt eq null) and
             (
               keyword?.lowercase()?.let {
-                (FeatureFlagTable.name like "%$it%") or
-                  (FeatureFlagTable.description like "%$it%")
+                (FeatureFlagTable.name.lowerCase() like "%$it%") or
+                  (FeatureFlagTable.description.lowerCase() like "%$it%") or
+                  (FeatureFlagTable.code.lowerCase() like "%$it%")
               } ?: Op.TRUE
             )
         }
