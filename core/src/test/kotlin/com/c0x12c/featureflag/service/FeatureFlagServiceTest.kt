@@ -181,6 +181,20 @@ class FeatureFlagServiceTest {
   }
 
   @Test
+  fun `listFeatureFlags with keyword should work`() {
+    val flags = listOf(FeatureFlag(id = UUID.randomUUID(), name = "Flag 1", code = "FLAG_1"), FeatureFlag(id = UUID.randomUUID(), name = "Flag 2", code = "FLAG_2"))
+
+    every { repository.list(100, 0, "flag 1") } returns listOf(flags[0])
+
+    val result = service.listFeatureFlags(keyword = "flag 1")
+
+    assertEquals(1, result.size)
+    assertEquals("Flag 1", result.first().name)
+
+    verify { repository.list(100, 0, "flag 1") }
+  }
+
+  @Test
   fun `isFeatureFlagEnabled should return correct result based on metadata`() {
     val code = "TEST_FLAG"
     val flag = FeatureFlag(id = UUID.randomUUID(), name = "Test Flag", code = code, enabled = true, metadata = MetadataContent.UserTargeting(targetedUserIds = listOf("user1", "user2"), percentage = 75.0), createdAt = Instant.now())
