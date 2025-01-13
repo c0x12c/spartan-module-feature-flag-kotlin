@@ -115,7 +115,7 @@ class FeatureFlagRepository(
         .find {
           (FeatureFlagTable.deletedAt eq null) and
             (
-              keyword?.let {
+              keyword?.lowercase()?.let {
                 (FeatureFlagTable.name like "%$it%") or
                   (FeatureFlagTable.description like "%$it%")
               } ?: Op.TRUE
