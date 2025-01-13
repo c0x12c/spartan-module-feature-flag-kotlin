@@ -10,7 +10,11 @@ import java.util.UUID
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.lowerCase
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class FeatureFlagRepository(
@@ -104,14 +108,25 @@ class FeatureFlagRepository(
 
   fun list(
     limit: Int = 100,
-    offset: Int = 0
-  ): List<FeatureFlag> =
-    transaction(database) {
+    offset: Int = 0,
+    keyword: String? = null
+  ): List<FeatureFlag> {
+    return transaction(database) {
       FeatureFlagEntity
-        .find { FeatureFlagTable.deletedAt eq null }
+        .find {
+          (FeatureFlagTable.deletedAt eq null) and
+            (
+              keyword?.lowercase()?.let {
+                (FeatureFlagTable.name.lowerCase() like "%$it%") or
+                  (FeatureFlagTable.description.lowerCase() like "%$it%") or
+                  (FeatureFlagTable.code.lowerCase() like "%$it%")
+              } ?: Op.TRUE
+            )
+        }
         .limit(limit, offset.toLong())
         .map { it.toFeatureFlag() }
     }
+  }
 
   fun findByMetadataType(
     type: FeatureFlagType,

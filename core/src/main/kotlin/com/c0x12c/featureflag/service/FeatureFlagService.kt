@@ -175,8 +175,9 @@ class FeatureFlagService(
    */
   fun listFeatureFlags(
     limit: Int = DEFAULT_LIMIT,
-    offset: Int = DEFAULT_OFFSET
-  ): List<FeatureFlag> = repository.list(limit, offset)
+    offset: Int = DEFAULT_OFFSET,
+    keyword: String? = null
+  ): List<FeatureFlag> = repository.list(limit, offset, keyword)
 
   /**
    * Finds feature flags by metadata type.
