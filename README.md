@@ -15,7 +15,7 @@ To install the module and its dependencies, use your preferred Kotlin dependency
 Gradle example:
 ```kotlin
 dependencies {
-    implementation("com.c0x12c:feature-flag:1.0.0")
+    implementation("com.c0x12c:feature-flag:0.4.2")
 }
 ```
 
